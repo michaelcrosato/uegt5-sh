@@ -189,8 +189,8 @@ It saw your beam. It felt the stairs.* — plus run stats and the seed, with
 | Sprint | hold Shift | 70 | Drains stamina |
 | Crouch | C | ×0.6 modifier | Lowers camera, shrinks silhouette |
 | Lean | Q / E | 0 | Peek without exposing |
-| Interact | E (tap) / **hold E = quiet** | varies | **Hold-to-be-quiet is a global pattern**: doors, drawers, switches all have a slow-quiet and fast-loud mode |
-| Flashlight | F | 6 (click on toggle) | The beam itself is light, not noise — but the click is real (§7.3), and some things hear it |
+| Interact | F (tap) / **hold F = quiet** | varies | **Hold-to-be-quiet is a global pattern**: doors, drawers, switches all have a slow-quiet and fast-loud mode. F, not E — E belongs to lean (decision #19) |
+| Flashlight | T | 6 (click on toggle) | The beam itself is light, not noise — but the click is real (§7.3), and some things hear it |
 | Throw | G | high at impact | The core distraction verb; throwables are found props |
 | Hide | E on hideable | 5 on entry | Behind / in / under (§5.4); camera cut + latch, no animation |
 | Climb / vault | Space near ledge | 30 | Camera-space parabola, no mesh (§9.3) |
@@ -1219,6 +1219,8 @@ Append-only. Every substantive roadmap change adds a line.
 | 16 | 2026-08-31 | Working title FOOTCANDLE | Photometric unit; literally footsteps + candlelight — the two channels in one word |
 | 17 | 2026-08-31 | Independent review pass applied before adoption | 14 findings fixed, notably: no MegaLights-off tier exists (a non-RT shadow floor would violate ADR-0004 *and* be slower); save v1 scheduled at M5 (the M6 gate depends on it); validation split into data-level (soak) vs engine-level (functional) checks; Director determinism scoped to the recorded event log, not physics replay; off-tier hunters simulate as graph-walks on `FCityData` |
 | 18 | 2026-08-31 | Player casts a real shadow via a hidden shadow-proxy body (M1, validated M2); enemy detection of player cast shadows deferred post-alpha by name | Arms-only player = no mesh = no shadow without a proxy; the rendered world must treat the player as geometry. AI shadow-reading is a fairness problem, not a rendering one |
+| 19 | 2026-08-31 | Bindings: **Interact F, Flashlight T, Lean Q/E** (was Interact E / Flashlight F) | The E-key conflict had to break one way in week one; decades of Q/E-lean muscle memory wins. All rebindable at M10 regardless |
+| 20 | 2026-08-31 | M1 grid constants frozen as speced (§5.3); M1 exit passed via 11/11 scripted behavior smoke + 6-station visual tour | The "traversal feels good" subjective gate awaits the director's hands-on pass; mechanics are evidence-verified (FCM1Smoke) |
 
 ---
 

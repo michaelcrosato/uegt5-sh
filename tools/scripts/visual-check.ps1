@@ -4,6 +4,7 @@
 param(
     [string]$OutDir = "",
     [string]$Map = "/Engine/Maps/Entry",
+    [ValidateSet("devscene", "address")][string]$Scene = "devscene",
     [int]$TimeoutSec = 300
 )
 $ErrorActionPreference = "Stop"
@@ -16,10 +17,11 @@ New-Item -ItemType Directory -Force $OutDir | Out-Null
 # ?game= on the URL beats any per-map GameMode override.
 $MapUrl = "$Map`?game=/Script/Footcandle.FCGameMode"
 
+$SceneFlag = if ($Scene -eq "address") { "-fcaddress" } else { "-fcdevscene" }
 $UeArgs = @(
     "$Project", $MapUrl, "-game",
     "-windowed", "-resx=1280", "-resy=720",
-    "-fcdevscene", "-fctour=$OutDir",
+    "-fcspectator", $SceneFlag, "-fctour=$OutDir",
     "-nosplash", "-log"
 )
 $Proc = Start-Process -FilePath "$UERoot\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" `
