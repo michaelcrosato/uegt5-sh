@@ -79,6 +79,37 @@ feat/  fix/  art/  perf/  docs/  chore/
 
 Squash-merge into `main`, so `main`'s history is one commit per change.
 
+## Branch protection
+
+`main` is guarded by a repository **ruleset** (`main-protection`), not classic
+branch protection. It enforces:
+
+| Rule | Effect |
+| --- | --- |
+| Block deletion | `main` cannot be deleted |
+| Block non-fast-forward | no `push --force` to `main` |
+| Require a pull request | **0** approvals required, so a solo developer can self-merge |
+| Squash merge only | one commit on `main` per change |
+| Require conversation resolution | no merging over an unresolved review comment |
+| Require status check `hygiene` | the repo-hygiene CI job must pass |
+
+The **repository admin role bypasses all of it**. That is deliberate: it keeps
+the documented workflow as the default path without locking the owner out of an
+emergency fix. Bypassing is an escape hatch, not a shortcut — if you are using it
+routinely, the ruleset is wrong and should be changed instead.
+
+### Renaming a CI job breaks merging
+
+The required status check is pinned to the **job name** `hygiene` in
+[`repo-hygiene.yml`](../../.github/workflows/repo-hygiene.yml). If that job is
+renamed, the check named `hygiene` never reports, and GitHub waits for it
+forever — every PR shows as blocked with no failing check to point at.
+
+Rename the job and update the ruleset in the same change, or do not rename it.
+
+The same trap catches any PR branched from before a job rename: it reports the
+*old* check name and is blocked until rebased onto `main`.
+
 ## The binary merge problem
 
 **`.uasset` and `.umap` files cannot be merged.** If two branches change the same
