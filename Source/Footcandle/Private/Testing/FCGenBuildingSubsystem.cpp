@@ -16,7 +16,10 @@
 #include "GameFramework/PlayerController.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "AI/FCWatcher.h"
 #include "Noise/FCNoiseSubsystem.h"
+#include "Objectives/FCExtractZone.h"
+#include "Objectives/FCKeyItem.h"
 #include "Perception/FCLightRegistry.h"
 #include "Testing/FCTestStationSubsystem.h"
 #include "World/FCDoor.h"
@@ -416,6 +419,48 @@ bool UFCGenBuildingSubsystem::SpawnFromSeed(const uint64 Seed)
 			Stations->RegisterStation(*FString::Printf(TEXT("GenFloor%d"), Floor),
 				FVector(W * 0.35f, D * 0.4f, Floor * FloorHeight + 165.0f),
 				FRotator(-4.0f, 40.0f, 0.0f));
+		}
+	}
+
+	// --- The M6 slice loop (-fcslice): key upstairs, extraction pad on the
+	// street. Hand-wired versions; M8's systemic conditions replace them. ---
+	if (FParse::Param(FCommandLine::Get(), TEXT("fcslice")))
+	{
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		// Key: center of the largest top-floor room.
+		int32 KeyRoom = INDEX_NONE;
+		int32 BestArea = 0;
+		for (const FFCGenRoom& Room : Building.Rooms)
+		{
+			const int32 Area = (Room.CellMax.X - Room.CellMin.X) * (Room.CellMax.Y - Room.CellMin.Y);
+			if (Room.Floor == Building.Floors - 1 && Area > BestArea)
+			{
+				KeyRoom = Room.Id;
+				BestArea = Area;
+			}
+		}
+		if (KeyRoom != INDEX_NONE)
+		{
+			const FFCGenRoom& Room = Building.Rooms[KeyRoom];
+			World->SpawnActor<AFCKeyItem>(FVector(
+				(Room.CellMin.X + Room.CellMax.X) * 0.5f * CellSize,
+				(Room.CellMin.Y + Room.CellMax.Y) * 0.5f * CellSize,
+				Room.Floor * FloorHeight + 60.0f), FRotator::ZeroRotator, Params);
+		}
+		World->SpawnActor<AFCExtractZone>(FVector(W * 0.5f, -1800, 10), FRotator::ZeroRotator, Params);
+	}
+	if (FParse::Param(FCommandLine::Get(), TEXT("fcwatcher")))
+	{
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (AFCWatcher* Watcher = World->SpawnActor<AFCWatcher>(
+			FVector(W + 1500, -800, 140), FRotator(0, 180, 0), Params))
+		{
+			Watcher->SetPatrolPoints({
+				FVector(W + 1500, -800, 140),
+				FVector(-1500, -800, 140),
+			});
 		}
 	}
 
