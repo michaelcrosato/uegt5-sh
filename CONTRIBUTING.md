@@ -1,5 +1,7 @@
 # Contributing
 
+> This is a personal project that happens to be public. The guidance below is written for people with commit access. Outside pull requests are not expected — but issues and design discussion are genuinely welcome, and the licence ([LICENSE](LICENSE)) does not grant rights to reuse the code or assets.
+
 ## Before your first commit
 
 ```bash

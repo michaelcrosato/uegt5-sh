@@ -1,4 +1,4 @@
-# uegt5-sr
+# uegt5-sh
 
 A first-person, low-poly game built in **Unreal Engine 5**.
 
@@ -40,8 +40,8 @@ text files instead of assets:
 
 ```bash
 git lfs install
-git clone https://github.com/michaelcrosato/uegt5-sr.git
-cd uegt5-sr
+git clone https://github.com/michaelcrosato/uegt5-sh.git
+cd uegt5-sh
 ```
 
 Windows only, and worth doing once globally — Unreal's `Content/` paths blow
@@ -119,3 +119,5 @@ Already committed something the wrong way? `git lfs migrate import --include="*.
 ## Licence
 
 Copyright © 2026 Michael Crosato. All rights reserved. See [LICENSE](LICENSE).
+
+This repository is public so the work can be read and followed, but it is **source-available, not open source** — there is no licence to use, copy or build on the code and assets. Reading, learning from it and opening issues are all welcome.

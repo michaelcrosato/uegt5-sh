@@ -1,7 +1,7 @@
 blank_issues_enabled: true
 contact_links:
   - name: Design discussion
-    url: https://github.com/michaelcrosato/uegt5-sr/discussions
+    url: https://github.com/michaelcrosato/uegt5-sh/discussions
     about: Open-ended design questions belong in Discussions, not in an issue.
   - name: Unreal Engine documentation
     url: https://dev.epicgames.com/documentation/en-us/unreal-engine

@@ -16,4 +16,4 @@ carries everything under **[Unreleased]**.
 - Design and engineering documentation (`docs/`), including art direction and naming conventions.
 - GitHub issue/PR templates, CODEOWNERS, Dependabot, and a repo-hygiene CI workflow.
 
-[Unreleased]: https://github.com/michaelcrosato/uegt5-sr/commits/main
+[Unreleased]: https://github.com/michaelcrosato/uegt5-sh/commits/main
