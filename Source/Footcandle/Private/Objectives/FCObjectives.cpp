@@ -2,6 +2,7 @@
 #include "Objectives/FCKeyItem.h"
 #include "Objectives/FCRunSubsystem.h"
 
+#include "AI/FCDirectorSubsystem.h"
 #include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -14,10 +15,16 @@
 
 // ---------- Run state ----------
 
-void UFCRunSubsystem::NotifyKeyTaken()
+void UFCRunSubsystem::NotifyConditionSatisfied(const TCHAR* Reason)
 {
-	bHasKey = true;
-	UE_LOG(LogFootcandle, Display, TEXT("[FCRUN] key condition satisfied"));
+	++ConditionsSatisfied;
+	UE_LOG(LogFootcandle, Display, TEXT("[FCRUN] condition %d/%d satisfied (%s)"),
+		ConditionsSatisfied, ConditionsRequired, Reason);
+	// Each satisfied condition escalates the run (ROADMAP 8.5: +15 pressure).
+	if (UFCDirectorSubsystem* Director = GetWorld()->GetSubsystem<UFCDirectorSubsystem>())
+	{
+		Director->AddPressure(15.0f, TEXT("condition satisfied"));
+	}
 }
 
 void UFCRunSubsystem::NotifyExtractionStarted()

@@ -57,8 +57,8 @@ namespace
 			{
 				continue;
 			}
-			const float FloorZ = Floor * FloorHeight;
-			if (Portal.Position.Z < FloorZ || Portal.Position.Z >= FloorZ + FloorHeight)
+			const float PortalFloorZ = Floor * FloorHeight;
+			if (Portal.Position.Z < PortalFloorZ || Portal.Position.Z >= PortalFloorZ + FloorHeight)
 			{
 				continue;
 			}
@@ -66,10 +66,10 @@ namespace
 			{
 			case EGenPortalKind::ExteriorDoor:
 			case EGenPortalKind::InteriorDoor:
-				Opens.Add({ PortalAlong - 50.0f, PortalAlong + 50.0f, FloorZ, FloorZ + 210.0f });
+				Opens.Add({ PortalAlong - 50.0f, PortalAlong + 50.0f, PortalFloorZ, PortalFloorZ + 210.0f });
 				break;
 			case EGenPortalKind::Window:
-				Opens.Add({ PortalAlong - 75.0f, PortalAlong + 75.0f, FloorZ + 90.0f, FloorZ + 220.0f });
+				Opens.Add({ PortalAlong - 75.0f, PortalAlong + 75.0f, PortalFloorZ + 90.0f, PortalFloorZ + 220.0f });
 				break;
 			default:
 				break;

@@ -15,8 +15,12 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Noise/FCNoiseSubsystem.h"
+#include "Objectives/FCExtractZone.h"
+#include "Objectives/FCKeyItem.h"
+#include "Objectives/FCRunSubsystem.h"
 #include "Perception/FCLightRegistry.h"
 #include "Testing/FCTestStationSubsystem.h"
+#include "World/FCBreakerPanel.h"
 
 using namespace FC::Gen;
 
@@ -137,7 +141,66 @@ bool UFCCitySubsystem::SpawnFromSeed(const uint64 Seed)
 				{
 					Registry->RegisterLight(Component);
 				}
+				StreetLightComponents.Add(Component);
 			}
+		}
+	}
+
+	// --- The run layer (-fcrun): 2 conditions - a key deep in lot 0 and the
+	// street substation. Streets START dark; restoring power is a condition,
+	// which makes the whole district navigable and lethal at once (ROADMAP
+	// 4.3 - the strongest expression of P4). ---
+	if (FParse::Param(FCommandLine::Get(), TEXT("fcrun")))
+	{
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (UFCRunSubsystem* Run = World->GetSubsystem<UFCRunSubsystem>())
+		{
+			Run->SetConditionsRequired(2);
+		}
+		// Key: top floor of lot 0.
+		{
+			const FFCCityLot& Lot = City.Lots[0];
+			int32 KeyRoom = INDEX_NONE;
+			int32 BestArea = 0;
+			for (const FFCGenRoom& Room : Lot.Building.Rooms)
+			{
+				const int32 Area = (Room.CellMax.X - Room.CellMin.X) * (Room.CellMax.Y - Room.CellMin.Y);
+				if (Room.Floor == Lot.Building.Floors - 1 && Area > BestArea)
+				{
+					KeyRoom = Room.Id;
+					BestArea = Area;
+				}
+			}
+			if (KeyRoom != INDEX_NONE)
+			{
+				const FFCGenRoom& Room = Lot.Building.Rooms[KeyRoom];
+				World->SpawnActor<AFCKeyItem>(Lot.Origin + FVector(
+					(Room.CellMin.X + Room.CellMax.X) * 0.5f * CellSize,
+					(Room.CellMin.Y + Room.CellMax.Y) * 0.5f * CellSize,
+					Room.Floor * FloorHeight + 60.0f), FRotator::ZeroRotator, Params);
+			}
+		}
+		// Substation on the mid south street: dark streets until thrown.
+		{
+			const float MidX = (City.ExtentMin.X + City.ExtentMax.X) * 0.5f;
+			if (AFCBreakerPanel* Substation = World->SpawnActor<AFCBreakerPanel>(
+				FVector(MidX + 700, -StreetWidth * 0.5f, 120), FRotator::ZeroRotator, Params))
+			{
+				Substation->SetLabel(TEXT("Street power"));
+				Substation->SetInitialOn(false);
+				Substation->bSatisfiesConditionWhenOn = true;
+				for (const TWeakObjectPtr<ULightComponent>& Light : StreetLightComponents)
+				{
+					Substation->LinkLight(Light.Get());
+				}
+			}
+		}
+		// Extraction pad at the south edge.
+		{
+			const float MidX = (City.ExtentMin.X + City.ExtentMax.X) * 0.5f;
+			World->SpawnActor<AFCExtractZone>(FVector(MidX - 1400, -StreetWidth - 600, 10),
+				FRotator::ZeroRotator, Params);
 		}
 	}
 

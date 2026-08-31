@@ -34,6 +34,7 @@ private:
 
 	FC::Gen::FFCCityData City;
 	TArray<FFCSpawnedBuilding> SpawnedLots;
+	TArray<TWeakObjectPtr<class ULightComponent>> StreetLightComponents;
 	int32 DetailLot = INDEX_NONE;
 	FTSTicker::FDelegateHandle StreamTicker;
 	bool bSpawned = false;
