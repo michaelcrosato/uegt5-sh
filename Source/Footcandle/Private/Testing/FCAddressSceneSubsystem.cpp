@@ -17,6 +17,7 @@
 #include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
 #include "Misc/CommandLine.h"
+#include "Noise/FCNoiseSubsystem.h"
 #include "Testing/FCTestStationSubsystem.h"
 #include "World/FCDoor.h"
 #include "World/FCHideSpot.h"
@@ -169,14 +170,40 @@ void UFCAddressSceneSubsystem::SpawnScene()
 		SpawnBox(FVector(X0, 420, 0), FVector(X0 + 38.0f, 600, 32.0f * (Step + 1)));
 	}
 
-	// --- Doors ---
+	// --- Acoustic room graph (ROADMAP 7.2): interior rooms first so point
+	// resolution prefers them over the enclosing street cell. ---
+	int32 EntryPortal = INDEX_NONE;
+	int32 InteriorPortal = INDEX_NONE;
+	if (UFCNoiseSubsystem* Noise = World->GetSubsystem<UFCNoiseSubsystem>())
+	{
+		using namespace FC::Gen;
+		FRoomGraph& Graph = Noise->GetRoomGraph();
+		const int32 WestRoom = Graph.AddRoom(FVector(0, 0, 0), FVector(600, 600, 320));
+		const int32 EastRoom = Graph.AddRoom(FVector(600, 0, 0), FVector(1000, 600, 320));
+		const int32 UpperRoom = Graph.AddRoom(FVector(0, 0, 320), FVector(1000, 600, 640));
+		const int32 Street = Graph.AddRoom(FVector(-2000, -2000, 0), FVector(3000, 2600, 640));
+
+		EntryPortal = Graph.AddPortal(Street, WestRoom, FVector(500, 0, 105), EAperture::DoorClosedExterior);
+		InteriorPortal = Graph.AddPortal(WestRoom, EastRoom, FVector(600, 200, 105), EAperture::DoorClosedInterior);
+		Graph.AddPortal(WestRoom, Street, FVector(0, 300, 155), EAperture::WindowOpen);   // west window (no glass)
+		Graph.AddPortal(EastRoom, UpperRoom, FVector(800, 500, 320), EAperture::Stairwell);
+		Graph.AddPortal(UpperRoom, Street, FVector(375, 0, 475), EAperture::WindowOpen);  // upper window
+	}
+
+	// --- Doors (bound to their acoustic portals) ---
 	{
 		FActorSpawnParameters Params;
 		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		// Entry door: hinge at west jamb of the south opening.
-		World->SpawnActor<AFCDoor>(FVector(450, -WallT * 0.5f, 0), FRotator::ZeroRotator, Params);
+		if (AFCDoor* Entry = World->SpawnActor<AFCDoor>(FVector(450, -WallT * 0.5f, 0), FRotator::ZeroRotator, Params))
+		{
+			Entry->BindAcousticPortal(EntryPortal, /*bExterior*/ true);
+		}
 		// Interior door: hinge at south jamb, leaf along Y.
-		World->SpawnActor<AFCDoor>(FVector(600 + WallT * 0.5f, 150, 0), FRotator(0, 90, 0), Params);
+		if (AFCDoor* Interior = World->SpawnActor<AFCDoor>(FVector(600 + WallT * 0.5f, 150, 0), FRotator(0, 90, 0), Params))
+		{
+			Interior->BindAcousticPortal(InteriorPortal, /*bExterior*/ false);
+		}
 	}
 
 	// --- Lights (movable, shadow-casting; per-room practicals) ---

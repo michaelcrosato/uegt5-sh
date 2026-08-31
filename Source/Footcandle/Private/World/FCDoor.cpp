@@ -48,6 +48,31 @@ FString AFCDoor::GetInteractionVerb() const
 	return IsOpen() ? TEXT("Close") : TEXT("Open");
 }
 
+void AFCDoor::BindAcousticPortal(const int32 InPortalId, const bool bInExterior)
+{
+	PortalId = InPortalId;
+	bExteriorDoor = bInExterior;
+	UpdateAcousticPortal();
+}
+
+void AFCDoor::UpdateAcousticPortal() const
+{
+	if (PortalId == INDEX_NONE)
+	{
+		return;
+	}
+	if (UFCNoiseSubsystem* Noise = GetWorld()->GetSubsystem<UFCNoiseSubsystem>())
+	{
+		// Acoustically open past ~25 degrees.
+		const FC::Gen::EAperture State = CurrentAngle > 25.0f
+			? FC::Gen::EAperture::DoorOpen
+			: (bExteriorDoor
+				? FC::Gen::EAperture::DoorClosedExterior
+				: FC::Gen::EAperture::DoorClosedInterior);
+		Noise->SetPortalState(PortalId, State);
+	}
+}
+
 void AFCDoor::EmitDoorNoise(const float Loudness) const
 {
 	if (UFCNoiseSubsystem* Noise = GetWorld()->GetSubsystem<UFCNoiseSubsystem>())
@@ -68,6 +93,7 @@ void AFCDoor::Tick(const float DeltaSeconds)
 
 	CurrentAngle = FMath::FInterpConstantTo(CurrentAngle, TargetAngle, DeltaSeconds, SwingSpeed);
 	HingePivot->SetRelativeRotation(FRotator(0.0f, CurrentAngle, 0.0f));
+	UpdateAcousticPortal();
 
 	// A fast swing that reaches the frame slams.
 	if (FMath::IsNearlyEqual(CurrentAngle, TargetAngle, 0.1f)

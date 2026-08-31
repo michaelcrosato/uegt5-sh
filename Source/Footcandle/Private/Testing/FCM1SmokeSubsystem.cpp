@@ -234,12 +234,69 @@ bool UFCM1SmokeSubsystem::Tick(float /*DeltaTime*/)
 		}
 		break;
 
-	case 5: // vault completes in ~0.35s; then finish
+	case 5: // vault completes in ~0.35s; then M3 propagation checks
 		if (Frame >= 560)
 		{
 			Check(TEXT("Vault: landed on/past the crate"),
 				Player->GetActorLocation().Y > -330.0f
 				&& Player->GetActorLocation().Z > 100.0f);
+
+			// M3: the portal graph is live in-world. A noise in the west room
+			// must reach the east room MUCH louder once the interior door
+			// opens (delta == aperture table, 22 - 5 = 17).
+			if (UFCNoiseSubsystem* Noise = World->GetSubsystem<UFCNoiseSubsystem>())
+			{
+				FFCNoiseEvent Probe;
+				Probe.Origin = FVector(300, 300, 150);   // west room
+				Probe.Loudness = 60.0f;
+				const FVector EastEar(800, 200, 150);    // east/stair room
+				const FVector StreetEar(500, -300, 150); // outside, door closed
+
+				const float EastClosed = Noise->PerceivedLoudnessAt(Probe, EastEar);
+				const float StreetClosed = Noise->PerceivedLoudnessAt(Probe, StreetEar);
+
+				// Open the interior door instantly (test path: snap the portal).
+				if (AFCDoor* Interior = FindNearest<AFCDoor>(World, FVector(610, 150, 0)))
+				{
+					Interior->Interact(Player, /*bQuiet*/ false);
+				}
+				Frame = 560;
+				Step = 6;
+				// Stash for the comparison after the swing.
+				MoveStart = FVector(EastClosed, StreetClosed, 0);
+			}
+			else
+			{
+				Finish();
+				return false;
+			}
+		}
+		break;
+
+	case 6: // interior door has swung open; re-measure propagation
+		if (Frame >= 640)
+		{
+			if (UFCNoiseSubsystem* Noise = World->GetSubsystem<UFCNoiseSubsystem>())
+			{
+				FFCNoiseEvent Probe;
+				Probe.Origin = FVector(300, 300, 150);
+				Probe.Loudness = 60.0f;
+				const float EastOpen = Noise->PerceivedLoudnessAt(Probe, FVector(800, 200, 150));
+				const float EastClosed = MoveStart.X;
+				const float StreetClosed = MoveStart.Y;
+
+				Check(TEXT("M3: east room louder through open door (+~17)"),
+					EastOpen > EastClosed + 14.0f && EastOpen < EastClosed + 20.0f);
+				// The west room has an OPEN (glassless) window: the street
+				// hears loudly through it no matter what the door does -
+				// "open windows leak" is a design truth, verified here.
+				Check(TEXT("M3: open window leaks loudly to the street"),
+					StreetClosed > 40.0f);
+				// Multi-hop: west -> (open door) -> east -> stairwell -> upper.
+				const float Upper = Noise->PerceivedLoudnessAt(Probe, FVector(500, 300, 480));
+				Check(TEXT("M3: upper floor hears via multi-hop path"),
+					Upper > 20.0f && Upper < Probe.Loudness);
+			}
 			Finish();
 			return false;
 		}

@@ -31,6 +31,10 @@ public:
 	float QuietSwingSpeed = 45.0f;
 	float NormalSwingSpeed = 240.0f;
 
+	// Acoustic portal binding (ROADMAP 7.2): the swinging leaf drives the
+	// portal state the noise model and - at M4 - enemy hearing consume.
+	void BindAcousticPortal(int32 InPortalId, bool bInExterior);
+
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "FC")
 	TObjectPtr<USceneComponent> HingePivot;
@@ -40,9 +44,12 @@ protected:
 
 private:
 	void EmitDoorNoise(float Loudness) const;
+	void UpdateAcousticPortal() const;
 
 	float CurrentAngle = 0.0f;
 	float TargetAngle = 0.0f;
 	float SwingSpeed = 0.0f;
 	bool bLastSwingWasFast = false;
+	int32 PortalId = INDEX_NONE;
+	bool bExteriorDoor = false;
 };

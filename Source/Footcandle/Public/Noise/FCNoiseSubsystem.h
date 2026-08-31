@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "FCRoomGraph.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "FCNoiseSubsystem.generated.h"
 
@@ -30,10 +31,9 @@ struct FFCNoiseEvent
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FFCOnNoiseEmitted, const FFCNoiseEvent&);
 
-// The single funnel for every gameplay sound event. M1 ships the API and
-// debug view; M3 replaces the internals with portal-graph propagation
-// (Dijkstra over the room graph) without changing a single call site.
-// Consumers: enemy hearing (M4) and the audio mix (M3) - never divergent.
+// The single funnel for every gameplay sound event, and - since M3 - the
+// portal-graph propagation model behind it (ROADMAP 7.2). One model, two
+// consumers: enemy hearing (M4) and the audio mix. Never divergent (P5).
 UCLASS()
 class FOOTCANDLE_API UFCNoiseSubsystem : public UWorldSubsystem
 {
@@ -42,10 +42,19 @@ class FOOTCANDLE_API UFCNoiseSubsystem : public UWorldSubsystem
 public:
 	void EmitNoise(const FVector& Origin, float Loudness, FName SourceTag, AActor* Instigator);
 
+	// --- Acoustic topology (registered by scene builders / the generator) ---
+	FC::Gen::FRoomGraph& GetRoomGraph() { return RoomGraph; }
+	void SetPortalState(int32 PortalId, FC::Gen::EAperture State);
+
+	// Perceived loudness of an event at a listener position, through the
+	// graph. This is THE hearing query - the M4 enemy consumes exactly this.
+	float PerceivedLoudnessAt(const FFCNoiseEvent& Event, const FVector& ListenerLocation) const;
+
 	FFCOnNoiseEmitted OnNoiseEmitted;
 
 	const TArray<FFCNoiseEvent>& GetRecentEvents() const { return RecentEvents; }
 
 private:
+	FC::Gen::FRoomGraph RoomGraph;
 	TArray<FFCNoiseEvent> RecentEvents; // ring of the last N for debug/AI
 };
