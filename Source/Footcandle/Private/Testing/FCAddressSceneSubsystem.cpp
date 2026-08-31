@@ -1,10 +1,14 @@
 #include "Testing/FCAddressSceneSubsystem.h"
 
+#include "Components/DirectionalLightComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/SpotLightComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Engine/DirectionalLight.h"
 #include "Engine/PointLight.h"
+#include "Engine/PostProcessVolume.h"
 #include "Engine/SpotLight.h"
+#include "World/FCFlickerComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
@@ -190,7 +194,8 @@ void UFCAddressSceneSubsystem::SpawnScene()
 		}
 	}
 	{
-		// Stair-room emergency light: dim, red, high.
+		// Stair-room emergency light: dim, red, high - and failing (the
+		// flicker component's regression fixture, ROADMAP 6.2).
 		APointLight* Light = World->SpawnActor<APointLight>(FVector(820, 200, 290), FRotator::ZeroRotator);
 		if (Light != nullptr)
 		{
@@ -200,6 +205,9 @@ void UFCAddressSceneSubsystem::SpawnScene()
 			Component->SetIntensity(18.0f);
 			Component->SetLightColor(FLinearColor(1.0f, 0.22f, 0.15f));
 			Component->SetAttenuationRadius(900.0f);
+			UFCFlickerComponent* Flicker = NewObject<UFCFlickerComponent>(Light);
+			Flicker->RegisterComponent();
+			Flicker->Configure(Component, EFCFlickerStyle::FailingTube, /*Seed*/ 2ull);
 		}
 	}
 	{
@@ -229,6 +237,40 @@ void UFCAddressSceneSubsystem::SpawnScene()
 			Component->SetInnerConeAngle(26.0f);
 			Component->SetOuterConeAngle(44.0f);
 			Component->SetVolumetricScatteringIntensity(2.5f);
+		}
+	}
+
+	// --- Moon: weak cool directional on VSM (MegaLights excludes
+	// directionals; VSM is its documented best case). Weak on purpose -
+	// practicals must matter (ROADMAP 6.2). ---
+	{
+		ADirectionalLight* Moon = World->SpawnActor<ADirectionalLight>(
+			FVector(0, 0, 2000), FRotator(-35.0f, 40.0f, 0.0f));
+		if (Moon != nullptr)
+		{
+			Moon->GetLightComponent()->SetMobility(EComponentMobility::Movable);
+			UDirectionalLightComponent* Component =
+				CastChecked<UDirectionalLightComponent>(Moon->GetLightComponent());
+			Component->SetIntensity(0.08f); // lux - deep night; capture-tuned from 0.4 which read as dusk
+			Component->SetLightColor(FLinearColor(0.55f, 0.65f, 0.95f));
+		}
+	}
+
+	// --- Night exposure: cap auto-exposure so darkness STAYS dark instead
+	// of auto-brightening into grey mush (ROADMAP 6.9). Tuned by capture. ---
+	{
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		APostProcessVolume* PP = World->SpawnActor<APostProcessVolume>(FVector::ZeroVector, FRotator::ZeroRotator, Params);
+		if (PP != nullptr)
+		{
+			PP->bUnbound = true;
+			PP->Settings.bOverride_AutoExposureMinBrightness = true;
+			PP->Settings.AutoExposureMinBrightness = 0.02f;
+			PP->Settings.bOverride_AutoExposureMaxBrightness = true;
+			PP->Settings.AutoExposureMaxBrightness = 0.18f;
+			PP->Settings.bOverride_AutoExposureBias = true;
+			PP->Settings.AutoExposureBias = -0.4f;
 		}
 	}
 

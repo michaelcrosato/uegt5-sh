@@ -3,6 +3,9 @@
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
 #include "Footcandle.h"
+#include "Misc/App.h"
+#include "GPUProfiler.h"
+#include "RenderCore.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
@@ -174,6 +177,24 @@ bool UFCTestStationSubsystem::TickTour(float /*DeltaTime*/)
 		return false;
 	}
 
+	// While sampling, accumulate thread/GPU timings every frame.
+	if (TourPhase == ETourPhase::Sampling)
+	{
+		SumFrameMs += FApp::GetDeltaTime() * 1000.0;
+		SumGameMs += FPlatformTime::ToMilliseconds(GGameThreadTime);
+		SumRenderMs += FPlatformTime::ToMilliseconds(GRenderThreadTime);
+		SumRHIMs += FPlatformTime::ToMilliseconds(GRHIThreadTime);
+		static FRHIGPUFrameTimeHistory::FState GPUTimeState;
+		static double LastGPUMs = 0.0;
+		uint64 GPUCycles64 = 0;
+		while (GPUTimeState.PopFrameCycles(GPUCycles64) != FRHIGPUFrameTimeHistory::EResult::Empty)
+		{
+			LastGPUMs = FPlatformTime::ToMilliseconds64(GPUCycles64);
+		}
+		SumGPUMs += LastGPUMs;
+		++SampleCount;
+	}
+
 	if (--TourFramesRemaining > 0)
 	{
 		return true;
@@ -181,7 +202,25 @@ bool UFCTestStationSubsystem::TickTour(float /*DeltaTime*/)
 
 	if (TourPhase == ETourPhase::Settling)
 	{
+		// Settled: sample perf for 45 frames before the screenshot.
+		SumGameMs = SumRenderMs = SumRHIMs = SumGPUMs = SumFrameMs = 0.0;
+		SampleCount = 0;
+		TourPhase = ETourPhase::Sampling;
+		TourFramesRemaining = 45;
+		return true;
+	}
+
+	if (TourPhase == ETourPhase::Sampling)
+	{
 		const FFCTestStation& Station = Stations[TourStationIndex];
+		if (SampleCount > 0)
+		{
+			UE_LOG(LogFootcandle, Display,
+				TEXT("[FCPERF] station=%s frame=%.2fms game=%.2fms render=%.2fms rhi=%.2fms gpu=%.2fms"),
+				*Station.Name.ToString(),
+				SumFrameMs / SampleCount, SumGameMs / SampleCount,
+				SumRenderMs / SampleCount, SumRHIMs / SampleCount, SumGPUMs / SampleCount);
+		}
 		const FString Filename = TourOutputDir / FString::Printf(TEXT("FC_%s.png"), *Station.Name.ToString());
 		FScreenshotRequest::RequestScreenshot(Filename, /*bInShowUI*/ false, /*bAddFilenameSuffix*/ false);
 		UE_LOG(LogFootcandle, Display, TEXT("[FCTEST] Capturing %s"), *Filename);

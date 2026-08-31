@@ -48,11 +48,15 @@ private:
 	TArray<FFCTestStation> Stations;
 
 	// Tour state machine.
-	enum class ETourPhase : uint8 { Idle, Settling, Capturing };
+	enum class ETourPhase : uint8 { Idle, Settling, Sampling, Capturing };
 	ETourPhase TourPhase = ETourPhase::Idle;
 	int32 TourStationIndex = 0;
 	int32 TourFramesRemaining = 0;
 	bool bTourQuitWhenDone = false;
 	FString TourOutputDir;
 	FTSTicker::FDelegateHandle TourTickerHandle;
+
+	// Per-station perf accumulation ([FCPERF] lines feed the 13.4 gates).
+	double SumGameMs = 0.0, SumRenderMs = 0.0, SumRHIMs = 0.0, SumGPUMs = 0.0, SumFrameMs = 0.0;
+	int32 SampleCount = 0;
 };

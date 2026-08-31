@@ -164,3 +164,11 @@ __pycache__/
 
 # Regenerable assets (AGENTS.md rule 10: commit the script, not the asset)
 Content/Generated/
+
+# Vendored NVIDIA plugins - installed by tools/scripts/install-dlss.ps1 (pinned v8.7.2)
+Plugins/DLSS/
+Plugins/NIS/
+Plugins/StreamlineCore/
+Plugins/StreamlineNGXCommon/
+Plugins/StreamlineReflex/
+Plugins/StreamlineDLSSG/
