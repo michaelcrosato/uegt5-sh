@@ -161,3 +161,6 @@ node_modules/
 __pycache__/
 *.pyc
 .venv/
+
+# Regenerable assets (AGENTS.md rule 10: commit the script, not the asset)
+Content/Generated/

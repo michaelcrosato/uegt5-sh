@@ -1,0 +1,9 @@
+{
+	"name": "SM_Kit_Wall_01",
+	"class": "kit",
+	"kind": "box",
+	"size_cm": [400.0, 20.0, 320.0],
+	"pivot": "corner",
+	"tri_budget": 200,
+	"palette_cell": 0
+}
