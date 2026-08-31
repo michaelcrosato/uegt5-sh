@@ -17,6 +17,7 @@
 #include "InputModifiers.h"
 #include "Interaction/FCInteractionComponent.h"
 #include "Noise/FCNoiseSubsystem.h"
+#include "Perception/FCLightRegistry.h"
 #include "Player/FCCameraCraftComponent.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -87,6 +88,12 @@ void AFCPlayerCharacter::BeginPlay()
 	Flashlight->SetVolumetricScatteringIntensity(2.0f);
 
 	CameraCraft->SetTargets(CameraRoot, Camera);
+
+	// The flashlight is a real light to the perception model too (ROADMAP 8.3).
+	if (UFCLightRegistry* Registry = GetWorld()->GetSubsystem<UFCLightRegistry>())
+	{
+		Registry->RegisterLight(Flashlight);
+	}
 }
 
 void AFCPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -273,15 +280,41 @@ void AFCPlayerCharacter::Landed(const FHitResult& Hit)
 
 float AFCPlayerCharacter::GetPassiveNoiseFloor() const
 {
-	// ROADMAP 7.3: still+listening 0; still 3; exhausted +20.
-	// Health states arrive with the survival pass.
+	// ROADMAP 7.3: still+listening 0; still 3; critical 22; exhausted +20.
 	const bool bStill = GetVelocity().SizeSquared() < 25.0f;
 	float Floor = bStill ? (bListening ? 0.0f : 3.0f) : 0.0f;
+	if (HealthState == EFCHealthState::Critical)
+	{
+		Floor += 22.0f; // the hurt-spiral: wounded breathing is loud
+	}
 	if (GetWorld()->GetTimeSeconds() < ExhaustedUntil)
 	{
 		Floor += 20.0f;
 	}
 	return Floor;
+}
+
+void AFCPlayerCharacter::ApplyHunterContact(const FString& AttributionSentence)
+{
+	const float Now = GetWorld()->GetTimeSeconds();
+	if (Now - LastContactTime < 1.5f || HealthState == EFCHealthState::Dead)
+	{
+		return; // one strike per grab; no double-tap frames
+	}
+	LastContactTime = Now;
+
+	if (HealthState == EFCHealthState::Fine)
+	{
+		HealthState = EFCHealthState::Critical;
+		CameraCraft->NotifyLanded(1.0f); // the hit reads through the camera
+		UE_LOG(LogFootcandle, Warning, TEXT("[FCPLAYER] CRITICAL - escape window open"));
+	}
+	else
+	{
+		HealthState = EFCHealthState::Dead;
+		DisableInput(Cast<APlayerController>(GetController()));
+		UE_LOG(LogFootcandle, Error, TEXT("[FCPLAYER] DEAD - %s"), *AttributionSentence);
+	}
 }
 
 void AFCPlayerCharacter::UpdateGaitAndStamina(const float DeltaSeconds)
@@ -364,6 +397,13 @@ void AFCPlayerCharacter::UpdateFootsteps(const float DeltaSeconds)
 
 void AFCPlayerCharacter::UpdateFlashlight(const float DeltaSeconds)
 {
+	// The beam is a pointing finger: register it with the perception model
+	// whether on or off (off clears it).
+	if (UFCLightRegistry* Registry = GetWorld()->GetSubsystem<UFCLightRegistry>())
+	{
+		Registry->SetActiveBeam(this, Flashlight->GetComponentLocation(),
+			Camera->GetForwardVector(), UFCTuningSettings::Get()->FlashlightRange, bFlashlightOn);
+	}
 	if (!bFlashlightOn)
 	{
 		return;

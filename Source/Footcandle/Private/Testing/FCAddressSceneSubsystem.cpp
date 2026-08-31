@@ -16,8 +16,10 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
+#include "AI/FCWatcher.h"
 #include "Misc/CommandLine.h"
 #include "Noise/FCNoiseSubsystem.h"
+#include "Perception/FCLightRegistry.h"
 #include "Testing/FCTestStationSubsystem.h"
 #include "World/FCDoor.h"
 #include "World/FCHideSpot.h"
@@ -207,6 +209,9 @@ void UFCAddressSceneSubsystem::SpawnScene()
 	}
 
 	// --- Lights (movable, shadow-casting; per-room practicals) ---
+	// Every gameplay light registers with the perception registry: "looks
+	// dark" and "is dark" must be the same model (ROADMAP 8.3).
+	UFCLightRegistry* Registry = World->GetSubsystem<UFCLightRegistry>();
 	UPointLightComponent* WestRoomLight = nullptr;
 	{
 		APointLight* Light = World->SpawnActor<APointLight>(FVector(300, 300, 270), FRotator::ZeroRotator);
@@ -218,6 +223,7 @@ void UFCAddressSceneSubsystem::SpawnScene()
 			WestRoomLight->SetIntensity(60.0f);
 			WestRoomLight->SetLightColor(FLinearColor(1.0f, 0.88f, 0.75f));
 			WestRoomLight->SetAttenuationRadius(1400.0f);
+			if (Registry != nullptr) { Registry->RegisterLight(WestRoomLight); }
 		}
 	}
 	{
@@ -232,6 +238,7 @@ void UFCAddressSceneSubsystem::SpawnScene()
 			Component->SetIntensity(18.0f);
 			Component->SetLightColor(FLinearColor(1.0f, 0.22f, 0.15f));
 			Component->SetAttenuationRadius(900.0f);
+			if (Registry != nullptr) { Registry->RegisterLight(Component); }
 			UFCFlickerComponent* Flicker = NewObject<UFCFlickerComponent>(Light);
 			Flicker->RegisterComponent();
 			Flicker->Configure(Component, EFCFlickerStyle::FailingTube, /*Seed*/ 2ull);
@@ -248,6 +255,7 @@ void UFCAddressSceneSubsystem::SpawnScene()
 			Component->SetIntensity(55.0f);
 			Component->SetLightColor(FLinearColor(1.0f, 0.85f, 0.7f));
 			Component->SetAttenuationRadius(1400.0f);
+			if (Registry != nullptr) { Registry->RegisterLight(Component); }
 		}
 	}
 	{
@@ -257,12 +265,20 @@ void UFCAddressSceneSubsystem::SpawnScene()
 		{
 			Light->GetLightComponent()->SetMobility(EComponentMobility::Movable);
 			USpotLightComponent* Component = CastChecked<USpotLightComponent>(Light->GetLightComponent());
+			// ASpotLight's component has a default downward RELATIVE rotation
+			// that composes badly with actor rotation - set WORLD rotation on
+			// the component (bug found via the lux registry, [FCLUX] cone log).
+			// Capture-tuned twice: the corrected aim at full power washed the
+			// whole facade and killed the doorway shadow - steeper, tighter,
+			// dimmer pools on the street and grazes the wall instead.
+			Component->SetWorldRotation(FRotator(-55.0f, 90.0f, 0.0f));
 			Component->SetIntensityUnits(ELightUnits::Candelas);
-			Component->SetIntensity(1800.0f);
+			Component->SetIntensity(800.0f);
 			Component->SetLightColor(FLinearColor(1.0f, 0.64f, 0.23f));
 			Component->SetAttenuationRadius(2200.0f);
-			Component->SetInnerConeAngle(26.0f);
-			Component->SetOuterConeAngle(44.0f);
+			if (Registry != nullptr) { Registry->RegisterLight(Component); }
+			Component->SetInnerConeAngle(20.0f);
+			Component->SetOuterConeAngle(32.0f);
 			Component->SetVolumetricScatteringIntensity(2.5f);
 		}
 	}
@@ -280,6 +296,10 @@ void UFCAddressSceneSubsystem::SpawnScene()
 				CastChecked<UDirectionalLightComponent>(Moon->GetLightComponent());
 			Component->SetIntensity(0.08f); // lux - deep night; capture-tuned from 0.4 which read as dusk
 			Component->SetLightColor(FLinearColor(0.55f, 0.65f, 0.95f));
+			if (Registry != nullptr)
+			{
+				Registry->RegisterLight(Component);
+			}
 		}
 	}
 
@@ -347,6 +367,22 @@ void UFCAddressSceneSubsystem::SpawnScene()
 		Stations->RegisterStation(TEXT("AddrStairs"), FVector(660, 140, 165), FRotator(8.0f, 65.0f, 0.0f));
 		Stations->RegisterStation(TEXT("AddrUpper"), FVector(160, 480, FloorZ + 165), FRotator(-6.0f, -35.0f, 0.0f));
 		Stations->RegisterStation(TEXT("AddrWindowSpill"), FVector(-420, 300, 140), FRotator(4.0f, 0.0f, 0.0f));
+	}
+
+	// --- The Watcher (-fcwatcher): patrols the street, hunts light ---
+	if (FParse::Param(FCommandLine::Get(), TEXT("fcwatcher")))
+	{
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (AFCWatcher* Watcher = World->SpawnActor<AFCWatcher>(
+			FVector(2000, -1000, 140), FRotator(0, 180, 0), Params))
+		{
+			Watcher->SetPatrolPoints({
+				FVector(2000, -1000, 140),
+				FVector(-1200, -1000, 140),
+				FVector(500, -1600, 140),
+			});
+		}
 	}
 
 	// Put the player on the street facing the door.

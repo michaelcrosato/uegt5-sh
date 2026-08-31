@@ -113,6 +113,7 @@ void UFCDevSceneSubsystem::SpawnScene()
 		{
 			Spot->GetLightComponent()->SetMobility(EComponentMobility::Movable);
 			USpotLightComponent* Component = CastChecked<USpotLightComponent>(Spot->GetLightComponent());
+			Component->SetWorldRotation(FRotator(-10.0f, 135.0f, 0.0f)); // see address scene note
 			Component->SetIntensityUnits(ELightUnits::Candelas);
 			Component->SetIntensity(2500.0f);
 			Component->SetLightColor(SodiumAmber);

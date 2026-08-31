@@ -21,6 +21,15 @@ enum class EFCGait : uint8
 	Sprint,
 };
 
+// Two-strike contact model (ROADMAP 4.5, decision #8).
+UENUM()
+enum class EFCHealthState : uint8
+{
+	Fine,
+	Critical,
+	Dead,
+};
+
 // The FOOTCANDLE player (ROADMAP 4.6): no visible body, arms-later viewmodel,
 // full camera craft, and a hidden shadow-proxy so the player casts a real
 // shadow past every lamp (decision log #18). Input is built procedurally in
@@ -47,6 +56,12 @@ public:
 
 	// Current passive noise floor (ROADMAP 7.3): 0 while still+listening.
 	float GetPassiveNoiseFloor() const;
+
+	// Hunter contact: first landed strike wounds (Critical + escape window),
+	// second kills. The death line NAMES the system that won (decision #8).
+	void ApplyHunterContact(const FString& AttributionSentence);
+	EFCHealthState GetHealthState() const { return HealthState; }
+	bool IsFlashlightOn() const { return bFlashlightOn; }
 
 #if !UE_BUILD_SHIPPING
 	// Scripted-smoke hooks (FCM1Smoke) - never compiled into shipping.
@@ -124,6 +139,8 @@ private:
 	void EmitPlayerNoise(float Loudness, FName Tag);
 
 	EFCGait Gait = EFCGait::Walk;
+	EFCHealthState HealthState = EFCHealthState::Fine;
+	float LastContactTime = -100.0f;
 	bool bWantsSprint = false;
 	bool bWantsSneak = false;
 	bool bListening = false;

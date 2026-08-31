@@ -5,6 +5,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "Noise/FCNoiseSubsystem.h"
+#include "Perception/FCLightRegistry.h"
 #include "Player/FCPlayerCharacter.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -36,6 +37,11 @@ void AFCLightSwitch::Interact(AFCPlayerCharacter* User, const bool /*bQuiet*/)
 		if (Light.IsValid())
 		{
 			Light->SetVisibility(bOn);
+			// A light DELTA is loud to things that hunt by light (ROADMAP 8.3).
+			if (UFCLightRegistry* Registry = GetWorld()->GetSubsystem<UFCLightRegistry>())
+			{
+				Registry->NotifyLightStateChanged(Light->GetComponentLocation());
+			}
 		}
 	}
 	// A switch is quiet - but it is not silent, and the light *change* is the

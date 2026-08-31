@@ -21,6 +21,8 @@ public class Footcandle : ModuleRules
 			"RHI",
 			"RenderCore",
 			"DeveloperSettings",
+			"NavigationSystem",
+			"AIModule",
 		});
 	}
 }

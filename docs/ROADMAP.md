@@ -1225,6 +1225,9 @@ Append-only. Every substantive roadmap change adds a line.
 | 22 | 2026-08-31 | **Ray Reconstruction: per-tier quality option, default OFF on the 3060-class High tier** — costs +2.8 ms GPU on the reference card, visibly cleaner denoising (wall grain resolved). Re-evaluated on city content at M7 | RR must displace ~3 ms elsewhere to fit the §6.1 budget; render thread relief (−1.4 ms) is real but not enough. Exactly the evidence-based per-tier adoption ADR-0007 called for |
 | 23 | 2026-08-31 | **MegaLights sparse-interior floor cost measured ≈ 0 ms** (on/off delta within noise, 4–5-light interior, 3060 Ti) — MegaLights stays on project-wide, no per-room hedging | The research-flagged "riskiest unknown" resolves benignly; re-verify at city light counts (M7) |
 | 24 | 2026-08-31 | Night exposure locked via clamped auto-exposure (min 0.02 / max 0.18 / bias −0.4) + moon at 0.08 lux, both capture-tuned | 0.4 lux moon read as dusk; darkness must stay dark and practicals must dominate (P4) |
+| 25 | 2026-08-31 | Lux registry works in **real lux**, saturating at 30 (street-lit) — replaces an arbitrary 0.004 normalization | Physical units keep "looks dark"/"is dark" tunable against renders; found via M4 smoke |
+| 26 | 2026-08-31 | **Engine gotcha, encoded in code comments**: spawned `ASpotLight`/light actors carry component-level default rotations — always `SetWorldRotation` on the *component* | The streetlight had aimed south-and-down since M1; every capture "worked" until the perception model disagreed with the image — exactly the AI-07 divergence the registry exists to catch |
+| 27 | 2026-08-31 | Watcher detection: fully-lit-in-direct-view ≈ 3.3 s to Hunt (rate 3.0/s·vis); measured-in-smoke | 11 s (initial 0.9 rate) was too forgiving; tuned via FCM4Smoke timing |
 
 ---
 
