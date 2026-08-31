@@ -21,28 +21,34 @@ void UFCNoiseSubsystem::SetPortalState(const int32 PortalId, const FC::Gen::EApe
 float UFCNoiseSubsystem::PerceivedLoudnessAt(const FFCNoiseEvent& Event,
 	const FVector& ListenerLocation) const
 {
+	// Listeners hear ABOVE the ambient floor (rain is cover).
+	auto AboveFloor = [this](const float Loudness)
+	{
+		return FMath::Max(Loudness - AmbientNoiseFloor, 0.0f);
+	};
+
 	// No topology registered: plain distance falloff so hearing still works
 	// in bare test worlds.
 	constexpr float DistanceLossPerMeter = 0.55f;
 	if (RoomGraph.Rooms.Num() == 0)
 	{
-		return FMath::Max(Event.Loudness
-			- FVector::Dist(Event.Origin, ListenerLocation) / 100.0f * DistanceLossPerMeter, 0.0f);
+		return AboveFloor(Event.Loudness
+			- FVector::Dist(Event.Origin, ListenerLocation) / 100.0f * DistanceLossPerMeter);
 	}
 
 	const int32 OriginRoom = RoomGraph.ResolveRoomOrNearest(Event.Origin);
 	const int32 ListenerRoom = RoomGraph.ResolveRoomOrNearest(ListenerLocation);
 	if (OriginRoom == ListenerRoom)
 	{
-		return FMath::Max(Event.Loudness
-			- FVector::Dist(Event.Origin, ListenerLocation) / 100.0f * DistanceLossPerMeter, 0.0f);
+		return AboveFloor(Event.Loudness
+			- FVector::Dist(Event.Origin, ListenerLocation) / 100.0f * DistanceLossPerMeter);
 	}
 
 	const FC::Gen::FPropagationResult Result = FC::Gen::PropagateNoise(
 		RoomGraph, OriginRoom, Event.Origin, Event.Loudness);
-	return Result.LoudnessPerRoom.IsValidIndex(ListenerRoom)
+	return AboveFloor(Result.LoudnessPerRoom.IsValidIndex(ListenerRoom)
 		? Result.LoudnessPerRoom[ListenerRoom]
-		: 0.0f;
+		: 0.0f);
 }
 
 void UFCNoiseSubsystem::EmitNoise(const FVector& Origin, const float Loudness,

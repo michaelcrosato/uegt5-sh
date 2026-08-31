@@ -14,6 +14,8 @@
 #include "GameFramework/PlayerController.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "AI/FCListener.h"
+#include "Footcandle.h"
 #include "Noise/FCNoiseSubsystem.h"
 #include "Objectives/FCExtractZone.h"
 #include "Objectives/FCKeyItem.h"
@@ -210,6 +212,34 @@ bool UFCCitySubsystem::SpawnFromSeed(const uint64 Seed)
 	{
 		FC::Spawn::SpawnShell(World, City.Lots[LotIndex].Building,
 			City.Lots[LotIndex].Origin, SpawnedLots[LotIndex]);
+	}
+
+	// --- Weather (-fcrain): rain raises the ambient noise floor (ROADMAP
+	// 7.2) - cover for you, mobility for the Listener. Visual rain rides the
+	// art pass; the SYSTEM ships now. ---
+	if (FParse::Param(FCommandLine::Get(), TEXT("fcrain")))
+	{
+		if (UFCNoiseSubsystem* Noise = World->GetSubsystem<UFCNoiseSubsystem>())
+		{
+			Noise->SetAmbientNoiseFloor(12.0f);
+			UE_LOG(LogFootcandle, Display, TEXT("[FCCITY] rain: ambient noise floor 12"));
+		}
+	}
+	// --- The Listener (-fclistener): the sound hunter on the mid street ---
+	if (FParse::Param(FCommandLine::Get(), TEXT("fclistener")))
+	{
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+		const float MidX = (City.ExtentMin.X + City.ExtentMax.X) * 0.5f;
+		const float MidY = (City.ExtentMin.Y + City.ExtentMax.Y) * 0.5f;
+		if (AFCListener* Listener = World->SpawnActor<AFCListener>(
+			FVector(MidX + 2200, MidY, 120), FRotator(0, 180, 0), Params))
+		{
+			Listener->SetPatrolPoints({
+				FVector(MidX + 2200, MidY, 120),
+				FVector(MidX - 2200, MidY, 120),
+			});
+		}
 	}
 
 	// --- Stations ---

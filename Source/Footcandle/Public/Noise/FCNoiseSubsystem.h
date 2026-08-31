@@ -50,6 +50,12 @@ public:
 	// graph. This is THE hearing query - the M4 enemy consumes exactly this.
 	float PerceivedLoudnessAt(const FFCNoiseEvent& Event, const FVector& ListenerLocation) const;
 
+	// The ambient noise floor (ROADMAP 7.2/7.4): listeners hear ABOVE it.
+	// Rain raises it - rain is cover, and the downpour is when you cross the
+	// avenue. Set by weather (-fcrain), never tooltipped.
+	void SetAmbientNoiseFloor(const float Floor) { AmbientNoiseFloor = Floor; }
+	float GetAmbientNoiseFloor() const { return AmbientNoiseFloor; }
+
 	FFCOnNoiseEmitted OnNoiseEmitted;
 
 	const TArray<FFCNoiseEvent>& GetRecentEvents() const { return RecentEvents; }
@@ -57,4 +63,5 @@ public:
 private:
 	FC::Gen::FRoomGraph RoomGraph;
 	TArray<FFCNoiseEvent> RecentEvents; // ring of the last N for debug/AI
+	float AmbientNoiseFloor = 0.0f;
 };
