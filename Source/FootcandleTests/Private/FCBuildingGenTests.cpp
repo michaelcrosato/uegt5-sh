@@ -1,4 +1,5 @@
 #include "FCBuildingGen.h"
+#include "FCCityGen.h"
 #include "Misc/AutomationTest.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -97,6 +98,47 @@ bool FFCBuildingSoakTest::RunTest(const FString& Parameters)
 	AddInfo(FString::Printf(TEXT("%d seeds: avg rooms=%.1f avg portals=%.1f failures=%d"),
 		Iterations, TotalRooms / static_cast<float>(Iterations),
 		TotalPortals / static_cast<float>(Iterations), Failures));
+	return Failures == 0;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FFCCitySoakTest,
+	"Footcandle.Gen.City.Soak100",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FFCCitySoakTest::RunTest(const FString& Parameters)
+{
+	int32 Failures = 0;
+	for (uint64 Seed = 0; Seed < 100; ++Seed)
+	{
+		const FFCCityData City = GenerateCity(Seed * 104729ull + 5ull, FFCCityRules());
+		const TArray<FString> Problems = ValidateCity(City);
+		if (Problems.Num() > 0)
+		{
+			++Failures;
+			AddError(FString::Printf(TEXT("city seed %llu: %s"),
+				Seed * 104729ull + 5ull, *FString::Join(Problems, TEXT("; "))));
+			if (Failures > 3)
+			{
+				break;
+			}
+		}
+		// Lots must not overlap: footprints stay inside their lot pitch by
+		// construction; verify the invariant anyway (guards future jitter).
+		for (const FFCCityLot& Lot : City.Lots)
+		{
+			const float FootW = Lot.Building.FootprintCells.X * CellSize;
+			const float FootD = Lot.Building.FootprintCells.Y * CellSize;
+			const float LotX = (Lot.LotId % City.LotGrid.X) * LotPitch;
+			const float LotY = (Lot.LotId / City.LotGrid.X) * LotPitch;
+			if (Lot.Origin.X < LotX - 0.5f || Lot.Origin.Y < LotY - 0.5f
+				|| Lot.Origin.X + FootW > LotX + LotPitch - StreetWidth + 0.5f
+				|| Lot.Origin.Y + FootD > LotY + LotPitch - StreetWidth + 0.5f)
+			{
+				AddError(FString::Printf(TEXT("lot %d escapes its bounds"), Lot.LotId));
+				++Failures;
+			}
+		}
+	}
 	return Failures == 0;
 }
 

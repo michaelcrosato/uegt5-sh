@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "FCBuildingGen.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "World/FCBuildingSpawner.h"
 #include "FCGenBuildingSubsystem.generated.h"
 
 class AFCDoor;
@@ -31,6 +32,7 @@ private:
 		float Z0, float Z1, int32 Floor);
 
 	FC::Gen::FFCBuildingData Building;
+	FFCSpawnedBuilding Spawned;
 	TArray<TObjectPtr<AFCDoor>> Doors;
 	bool bSpawned = false;
 };
