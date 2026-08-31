@@ -58,9 +58,13 @@ Rules:
   new blue because it looked nice in one scene.
 - Lighting does the mood work: strong key direction, coloured fill, and generous
   fog. Low-poly reads badly under flat neutral light.
-- Lumen is fine for a low-poly game and saves lightmap authoring — but validate
-  performance early, and be ready to fall back to baked lighting if the target
-  hardware demands it. Record the decision as an ADR if you switch.
+- Lighting is **100% real-time with hardware ray tracing, on every tier** —
+  Lumen HWRT + MegaLights; there is no baked fallback. This is a settled,
+  load-bearing decision ([ADR-0004](../adr/0004-realtime-raytraced-lighting-required.md));
+  the full lighting bible lives in [`docs/ROADMAP.md`](../ROADMAP.md) §6.
+- Albedo discipline: keep base colour values in the **0.15–0.65** range. Near-
+  black kills GI bounce; near-white blows out. Most "Lumen looks wrong" bugs
+  are palette bugs.
 
 ## First-person specifics
 

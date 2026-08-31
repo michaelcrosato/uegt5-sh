@@ -36,8 +36,14 @@ Do not assume `Source/`, `Content/` or `Config/` are present — check first.
    to them happen in the Unreal Editor, not in an editor tool.
 5. **Do not hand-edit `Config/*.ini` casually.** The editor rewrites these files;
    prefer changing settings through Project Settings so the serialisation matches.
+   Exception: engine cvars with no Project Settings surface (e.g. renderer
+   tuning like `r.Lumen.*` overrides required by the DLSS plugin) go in ini
+   deliberately, each with a comment naming why (see `docs/ROADMAP.md` §6).
 6. Commit or push only when asked. Branch off `main` — never commit to `main`
-   directly.
+   directly. Exception: a safety checkpoint commit on the current work branch
+   immediately **before** any agent-driven editor session (Unreal MCP) is
+   pre-authorised — an agent with editor write access and no checkpoint is a
+   bad afternoon.
 
 ## Conventions
 

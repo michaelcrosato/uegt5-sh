@@ -88,6 +88,7 @@ Directories the engine generates (`Binaries/`, `Intermediate/`, `Saved/`,
 
 | Topic | Document |
 | --- | --- |
+| **Project roadmap to Alpha** (design, tech, milestones) | [`docs/ROADMAP.md`](docs/ROADMAP.md) |
 | Asset & C++ naming | [`docs/engineering/asset-naming-conventions.md`](docs/engineering/asset-naming-conventions.md) |
 | C++ style, module layout | [`docs/engineering/coding-standards.md`](docs/engineering/coding-standards.md) |
 | Branching, LFS, binary merge conflicts | [`docs/engineering/source-control.md`](docs/engineering/source-control.md) |
