@@ -1,0 +1,57 @@
+# Aligned with Unreal Engine's C++ coding standard.
+# Applied by Visual Studio, Rider and clang-format to Source/ and Plugins/*/Source/.
+#
+# Formatting is a convention, not a gate: no CI job enforces this, because
+# reformatting churn on generated Unreal code costs more than it saves.
+---
+Language: Cpp
+BasedOnStyle: LLVM
+
+# Unreal uses tabs, width 4.
+UseTab: Always
+TabWidth: 4
+IndentWidth: 4
+ColumnLimit: 120
+
+# Allman braces, everywhere.
+BreakBeforeBraces: Allman
+
+AccessModifierOffset: -4
+IndentAccessModifiers: false
+NamespaceIndentation: None
+FixNamespaceComments: true
+
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Empty
+
+AlignAfterOpenBracket: DontAlign
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignTrailingComments: true
+AlignOperands: DontAlign
+
+PointerAlignment: Left
+ReferenceAlignment: Left
+DerivePointerAlignment: false
+
+BreakConstructorInitializers: BeforeComma
+ConstructorInitializerIndentWidth: 4
+SpaceBeforeCtorInitializerColon: true
+BreakInheritanceList: BeforeComma
+
+SpaceAfterCStyleCast: false
+SpaceBeforeParens: ControlStatements
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+SpacesInAngles: false
+Cpp11BracedListStyle: false
+
+# Unreal's generated header must stay last -- never let the tool reorder it.
+SortIncludes: false
+IndentPPDirectives: None
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+ReflowComments: false

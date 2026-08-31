@@ -1,0 +1,16 @@
+version: 2
+updates:
+  # Keep CI actions current. Nothing else in this repo has a package manifest;
+  # Unreal dependencies are pinned by the engine version, not by a lockfile.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "ci"
+    labels:
+      - dependencies
+      - ci
+    groups:
+      actions:
+        patterns: ["*"]

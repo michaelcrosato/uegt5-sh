@@ -1,0 +1,8 @@
+# Default owner for everything in the repo.
+* @michaelcrosato
+
+# Files where a mistake is expensive or irreversible.
+/.gitattributes        @michaelcrosato
+/.gitignore            @michaelcrosato
+/.github/              @michaelcrosato
+/docs/adr/             @michaelcrosato

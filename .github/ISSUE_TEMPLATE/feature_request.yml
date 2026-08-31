@@ -1,0 +1,46 @@
+name: Feature / task
+description: A gameplay feature, system, or engineering task.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: What should exist
+      description: Describe the outcome, not the implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: Which design pillar or problem does this serve?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: pillars
+    attributes:
+      label: Pillar check
+      description: Confirm this does not fight the project's constraints.
+      options:
+        - label: Works from a first-person camera with no visible body
+        - label: Consistent with the low-poly art direction
+        - label: Needs no new skeletal animation (or explains below why it must)
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Done looks like
+      description: Concrete, checkable criteria.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes, risks, alternatives
+      description: If this decision is expensive to reverse, an ADR is probably needed.

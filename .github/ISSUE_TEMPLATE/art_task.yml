@@ -1,0 +1,56 @@
+name: Art task
+description: An asset, material, level, or VFX task.
+labels: ["art"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Asset type
+      options:
+        - Static mesh / prop
+        - Modular environment kit
+        - Character / creature
+        - First-person viewmodel
+        - Material / shader
+        - Level / greybox
+        - VFX
+        - UI
+        - Audio
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What is needed
+      description: Include silhouette intent and how it reads at gameplay distance.
+    validations:
+      required: true
+
+  - type: input
+    id: budget
+    attributes:
+      label: Triangle budget
+      description: See docs/design/art-direction.md for the default per class.
+
+  - type: input
+    id: destination
+    attributes:
+      label: Content path
+      placeholder: "Content/Environment/Props/"
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Style constraints
+      options:
+        - label: Hard-edged, flat-shaded (no smoothing unless the form requires it)
+        - label: Uses an existing master material / shared palette
+        - label: Grid-aligned if modular (100 uu)
+        - label: Follows the naming convention
+
+  - type: textarea
+    id: reference
+    attributes:
+      label: Reference
+      description: Images or links. Keep it to a few decisive references.

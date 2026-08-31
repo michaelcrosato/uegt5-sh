@@ -1,0 +1,62 @@
+name: Bug report
+description: Something behaves incorrectly in the editor or in a build.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you observe, and what did you expect instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open L_Atrium
+        2. Play in editor
+        3. Walk into the trigger volume
+        4. ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: context
+    attributes:
+      label: Where did it happen?
+      options:
+        - Play In Editor
+        - Standalone game
+        - Packaged build
+        - Editor (not in play)
+    validations:
+      required: true
+
+  - type: input
+    id: commit
+    attributes:
+      label: Commit
+      description: Output of `git rev-parse --short HEAD`
+    validations:
+      required: true
+
+  - type: input
+    id: engine
+    attributes:
+      label: Engine version
+      placeholder: "5.x.x"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log output
+      description: Relevant lines from `Saved/Logs/`. Errors and warnings around the failure.
+      render: text
+
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshot or clip
+      description: Drag and drop. Strongly preferred for anything visual.

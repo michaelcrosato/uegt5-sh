@@ -1,0 +1,163 @@
+###############################################################################
+# Unreal Engine 5 project .gitignore
+#
+# Rule of thumb: commit Config/, Content/, Source/, Plugins/*/Source|Content.
+# Everything the engine or the compiler can regenerate stays out.
+###############################################################################
+
+#------------------------------------------------------------------------------
+# Unreal generated directories (root and per-plugin/per-platform)
+#------------------------------------------------------------------------------
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+Script/
+Platforms/*/Binaries/
+Platforms/*/Intermediate/
+
+# Same directories anywhere in the tree (plugins, program targets, ...)
+**/Binaries/
+**/DerivedDataCache/
+**/Intermediate/
+**/Saved/
+
+# Build/ holds generated artefacts plus a few files worth keeping.
+Build/*
+!Build/*/
+Build/*/**
+!Build/*/PakBlacklist*.txt
+!Build/*/Application.ico
+!Build/*/Resources/**
+
+# Cooked / staged / packaged output
+Cooked/
+Packaged/
+Dist/
+Builds/
+*.pak
+*.utoc
+*.ucas
+
+#------------------------------------------------------------------------------
+# Generated project files (regenerated from the .uproject)
+#------------------------------------------------------------------------------
+*.sln
+*.suo
+*.sdf
+*.opensdf
+*.opendb
+*.VC.db
+*.VC.opendb
+*.xcodeproj/
+*.xcworkspace/
+Makefile
+CMakeLists.txt
+CMakeSettings.json
+compile_commands.json
+.ignore
+*.workspace
+
+#------------------------------------------------------------------------------
+# Compiler / linker leftovers
+#------------------------------------------------------------------------------
+*.o
+*.obj
+*.slo
+*.lo
+*.lai
+*.la
+*.gch
+*.pch
+*.ilk
+*.exp
+*.idb
+*.tlog
+*.pdb
+*.map
+*.def
+*.dll
+*.dylib
+*.so
+*.so.*
+*.a
+*.lib
+*.exe
+*.out
+*.app
+
+#------------------------------------------------------------------------------
+# IDEs & editors
+#------------------------------------------------------------------------------
+.vs/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.shared.json
+.idea/
+*.iml
+.rider/
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+.fleet/
+*.code-workspace
+
+#------------------------------------------------------------------------------
+# OS noise
+#------------------------------------------------------------------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.stackdump
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+#------------------------------------------------------------------------------
+# Logs, crash dumps, temp
+#------------------------------------------------------------------------------
+*.log
+*.tlog
+*.tmp
+*.temp
+*.bak
+*.swp
+*.orig
+*.rej
+crashreport*/
+
+#------------------------------------------------------------------------------
+# DCC scratch files (keep the source .blend, drop the autosaves)
+#------------------------------------------------------------------------------
+*.blend1
+*.blend2
+*.blend@
+*.autosave
+*.max_autoback
+
+#------------------------------------------------------------------------------
+# Secrets & local-only config -- never commit these
+#------------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.keystore
+*.p12
+*.pfx
+secrets.json
+**/PrivateConfig/
+
+#------------------------------------------------------------------------------
+# Tooling
+#------------------------------------------------------------------------------
+.claude/settings.local.json
+node_modules/
+__pycache__/
+*.pyc
+.venv/

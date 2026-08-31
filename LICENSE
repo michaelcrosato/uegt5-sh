@@ -1,0 +1,28 @@
+Copyright (c) 2026 Michael Crosato
+
+All rights reserved.
+
+This software and its associated assets, source code, documentation and design
+materials (collectively, the "Work") are the proprietary and confidential
+property of the copyright holder.
+
+No permission is granted to any person to use, copy, modify, merge, publish,
+distribute, sublicense, sell, or create derivative works from the Work, in whole
+or in part, without the prior written permission of the copyright holder.
+
+Unauthorised copying, distribution or use of the Work, via any medium, is
+strictly prohibited.
+
+THE WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE WORK OR THE USE OR OTHER DEALINGS IN THE WORK.
+
+---
+
+Third-party components (including Unreal Engine, its plugins, and any
+marketplace or third-party assets incorporated into this project) remain subject
+to their own licences. Use of Unreal Engine is governed by the Unreal Engine
+End User License Agreement: https://www.unrealengine.com/eula
