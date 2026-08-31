@@ -155,6 +155,22 @@ void AFCPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 	MappingContext->MapKey(FlashlightAction, EKeys::T);
 	MappingContext->MapKey(VaultAction, EKeys::SpaceBar);
 	MappingContext->MapKey(ListenAction, EKeys::LeftAlt);
+	{
+		UInputAction* PauseAction = MakeAction(TEXT("IA_Pause"), EInputActionValueType::Boolean);
+		PauseAction->bTriggerWhenPaused = true; // Escape must also UNpause
+		MappingContext->MapKey(PauseAction, EKeys::Escape);
+		if (UEnhancedInputComponent* PauseInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+		{
+			PauseInput->BindActionValueLambda(PauseAction, ETriggerEvent::Started,
+				[this](const FInputActionValue&)
+				{
+					if (APlayerController* PC = Cast<APlayerController>(GetController()))
+					{
+						PC->SetPause(!GetWorld()->IsPaused());
+					}
+				});
+		}
+	}
 
 	if (const APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
