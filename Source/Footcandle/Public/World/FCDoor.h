@@ -35,6 +35,9 @@ public:
 	// portal state the noise model and - at M4 - enemy hearing consume.
 	void BindAcousticPortal(int32 InPortalId, bool bInExterior);
 
+	// Save/load restore: snap to a state with no swing, no noise.
+	void SetOpenInstant(bool bOpen);
+
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "FC")
 	TObjectPtr<USceneComponent> HingePivot;

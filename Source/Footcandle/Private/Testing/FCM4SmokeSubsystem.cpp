@@ -22,7 +22,7 @@ namespace
 		return nullptr;
 	}
 
-	AFCPlayerCharacter* GetPlayer(UWorld* World)
+	AFCPlayerCharacter* GetPlayerM4(UWorld* World)
 	{
 		const APlayerController* PC = World->GetFirstPlayerController();
 		return PC != nullptr ? Cast<AFCPlayerCharacter>(PC->GetPawn()) : nullptr;
@@ -67,7 +67,7 @@ void UFCM4SmokeSubsystem::Check(const TCHAR* Name, const bool bCondition)
 bool UFCM4SmokeSubsystem::Tick(const float DeltaTime)
 {
 	UWorld* World = GetWorld();
-	AFCPlayerCharacter* Player = GetPlayer(World);
+	AFCPlayerCharacter* Player = GetPlayerM4(World);
 	AFCWatcher* Watcher = FindWatcher(World);
 	if (Player == nullptr || Watcher == nullptr)
 	{

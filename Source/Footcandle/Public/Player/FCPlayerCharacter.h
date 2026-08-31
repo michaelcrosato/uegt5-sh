@@ -60,6 +60,13 @@ public:
 	// Hunter contact: first landed strike wounds (Critical + escape window),
 	// second kills. The death line NAMES the system that won (decision #8).
 	void ApplyHunterContact(const FString& AttributionSentence);
+
+	// Save/load restore (UFCSaveSubsystem only).
+	void RestoreFromSave(const float InBattery, const float InStamina)
+	{
+		Battery = InBattery;
+		Stamina = InStamina;
+	}
 	EFCHealthState GetHealthState() const { return HealthState; }
 	bool IsFlashlightOn() const { return bFlashlightOn; }
 

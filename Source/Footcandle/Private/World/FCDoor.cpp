@@ -48,6 +48,15 @@ FString AFCDoor::GetInteractionVerb() const
 	return IsOpen() ? TEXT("Close") : TEXT("Open");
 }
 
+void AFCDoor::SetOpenInstant(const bool bOpen)
+{
+	TargetAngle = bOpen ? 105.0f : 0.0f;
+	CurrentAngle = TargetAngle;
+	bLastSwingWasFast = false;
+	HingePivot->SetRelativeRotation(FRotator(0.0f, CurrentAngle, 0.0f));
+	UpdateAcousticPortal();
+}
+
 void AFCDoor::BindAcousticPortal(const int32 InPortalId, const bool bInExterior)
 {
 	PortalId = InPortalId;
