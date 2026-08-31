@@ -24,7 +24,7 @@ jobs:
     name: hygiene
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           # Deliberately do NOT fetch LFS objects: the checks read pointer files
           # from the index, and downloading real assets would burn LFS bandwidth
@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           lfs: false
           fetch-depth: 0
