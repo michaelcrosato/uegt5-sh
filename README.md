@@ -61,6 +61,27 @@ Once the `.uproject` exists:
 
 ---
 
+## Playing a packaged build
+
+Package with the `BuildCookRun` command in `CLAUDE.md` (archives to `Dist/`),
+then double-click `Dist/Windows/Footcandle.exe` — no arguments needed. Every
+launch generates a fresh night district and starts a run: find the key, restore
+the street power, reach the extraction pad, survive the commit window. A GPU
+with hardware ray tracing is required.
+
+| Key | Action |
+| --- | --- |
+| WASD / mouse | Move / look |
+| Shift · Ctrl · C | Sprint · sneak · crouch |
+| Q / E | Lean |
+| F (hold = quiet) | Interact |
+| T | Flashlight |
+| Space | Vault |
+| Alt (hold) | Hold breath / listen |
+| Esc · F10 · R | Pause · quit · retry (after death, same seed) |
+
+---
+
 ## Repository layout
 
 ```
