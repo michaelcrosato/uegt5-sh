@@ -156,20 +156,52 @@ void AFCPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 	MappingContext->MapKey(VaultAction, EKeys::SpaceBar);
 	MappingContext->MapKey(ListenAction, EKeys::LeftAlt);
 	{
+		UEnhancedInputComponent* ShellInput = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+
 		UInputAction* PauseAction = MakeAction(TEXT("IA_Pause"), EInputActionValueType::Boolean);
 		PauseAction->bTriggerWhenPaused = true; // Escape must also UNpause
 		MappingContext->MapKey(PauseAction, EKeys::Escape);
-		if (UEnhancedInputComponent* PauseInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
-		{
-			PauseInput->BindActionValueLambda(PauseAction, ETriggerEvent::Started,
-				[this](const FInputActionValue&)
+		ShellInput->BindActionValueLambda(PauseAction, ETriggerEvent::Started,
+			[this](const FInputActionValue&)
+			{
+				if (HealthState != EFCHealthState::Dead)
 				{
 					if (APlayerController* PC = Cast<APlayerController>(GetController()))
 					{
 						PC->SetPause(!GetWorld()->IsPaused());
 					}
-				});
-		}
+				}
+			});
+
+		// Shell verbs a packaged player needs (M10 dev shell):
+		// F10 quits from anywhere; R after death retries THE SAME SEED
+		// (the city subsystem stashes it across in-process restarts).
+		UInputAction* QuitAction = MakeAction(TEXT("IA_Quit"), EInputActionValueType::Boolean);
+		QuitAction->bTriggerWhenPaused = true;
+		MappingContext->MapKey(QuitAction, EKeys::F10);
+		ShellInput->BindActionValueLambda(QuitAction, ETriggerEvent::Started,
+			[this](const FInputActionValue&)
+			{
+				if (APlayerController* PC = Cast<APlayerController>(GetController()))
+				{
+					PC->ConsoleCommand(TEXT("quit"));
+				}
+			});
+
+		UInputAction* RetryAction = MakeAction(TEXT("IA_Retry"), EInputActionValueType::Boolean);
+		RetryAction->bTriggerWhenPaused = true;
+		MappingContext->MapKey(RetryAction, EKeys::R);
+		ShellInput->BindActionValueLambda(RetryAction, ETriggerEvent::Started,
+			[this](const FInputActionValue&)
+			{
+				if (HealthState == EFCHealthState::Dead)
+				{
+					if (APlayerController* PC = Cast<APlayerController>(GetController()))
+					{
+						PC->RestartLevel();
+					}
+				}
+			});
 	}
 
 	if (const APlayerController* PC = Cast<APlayerController>(GetController()))
@@ -202,7 +234,7 @@ void AFCPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 
 void AFCPlayerCharacter::OnMove(const FInputActionValue& Value)
 {
-	if (bVaulting)
+	if (bVaulting || HealthState == EFCHealthState::Dead)
 	{
 		return;
 	}
@@ -213,6 +245,10 @@ void AFCPlayerCharacter::OnMove(const FInputActionValue& Value)
 
 void AFCPlayerCharacter::OnLook(const FInputActionValue& Value)
 {
+	if (HealthState == EFCHealthState::Dead)
+	{
+		return;
+	}
 	const FVector2D Axis = Value.Get<FVector2D>();
 	AddControllerYawInput(Axis.X);
 	AddControllerPitchInput(Axis.Y);
@@ -240,7 +276,10 @@ void AFCPlayerCharacter::OnCrouchToggle(const FInputActionValue&)
 
 void AFCPlayerCharacter::OnInteractPressed(const FInputActionValue&)
 {
-	Interaction->OnInteractPressed();
+	if (HealthState != EFCHealthState::Dead)
+	{
+		Interaction->OnInteractPressed();
+	}
 }
 
 void AFCPlayerCharacter::OnInteractReleased(const FInputActionValue&)
@@ -327,8 +366,15 @@ void AFCPlayerCharacter::ApplyHunterContact(const FString& AttributionSentence)
 	}
 	else
 	{
+		// Dead: gameplay verbs stop (handlers gate on HealthState) but input
+		// stays live so [R] retry and [F10] quit still work on the card.
 		HealthState = EFCHealthState::Dead;
-		DisableInput(Cast<APlayerController>(GetController()));
+		GetCharacterMovement()->DisableMovement();
+		if (bFlashlightOn)
+		{
+			bFlashlightOn = false;
+			Flashlight->SetVisibility(false);
+		}
 		UE_LOG(LogFootcandle, Error, TEXT("[FCPLAYER] DEAD - %s"), *AttributionSentence);
 	}
 }

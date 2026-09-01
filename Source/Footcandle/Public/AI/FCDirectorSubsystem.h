@@ -24,6 +24,9 @@ public:
 	float GetPressure() const { return Pressure; }
 	bool IsHunterActive() const { return Hunter.IsValid(); }
 
+	// The default boot path enables the Director without command-line flags.
+	void EnableNow();
+
 	void AddPressure(float Amount, const TCHAR* Reason);
 	void NotifyContactResolved();
 

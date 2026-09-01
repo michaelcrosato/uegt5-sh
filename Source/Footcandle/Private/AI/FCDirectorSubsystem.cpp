@@ -9,14 +9,22 @@
 void UFCDirectorSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
-	if (!InWorld.IsGameWorld() || !FParse::Param(FCommandLine::Get(), TEXT("fcdirector")))
+	if (InWorld.IsGameWorld() && FParse::Param(FCommandLine::Get(), TEXT("fcdirector")))
+	{
+		EnableNow();
+	}
+}
+
+void UFCDirectorSubsystem::EnableNow()
+{
+	if (bEnabled)
 	{
 		return;
 	}
 	bEnabled = true;
 
 	// Player noise feeds pressure: a loud run is a hunted run.
-	if (UFCNoiseSubsystem* Noise = InWorld.GetSubsystem<UFCNoiseSubsystem>())
+	if (UFCNoiseSubsystem* Noise = GetWorld()->GetSubsystem<UFCNoiseSubsystem>())
 	{
 		NoiseHandle = Noise->OnNoiseEmitted.AddLambda([this](const FFCNoiseEvent& Event)
 		{

@@ -21,7 +21,7 @@ public:
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 	virtual void Deinitialize() override;
 
-	bool SpawnFromSeed(uint64 Seed);
+	bool SpawnFromSeed(uint64 Seed, bool bRunLayer, bool bListener, bool bRain);
 
 	const FC::Gen::FFCCityData& GetCityData() const { return City; }
 	int32 GetDetailLot() const { return DetailLot; }

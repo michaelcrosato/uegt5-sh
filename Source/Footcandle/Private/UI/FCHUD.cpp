@@ -62,6 +62,8 @@ void AFCHUD::DrawHUD()
 			CenterY + 6, FLinearColor(0.75f, 0.72f, 0.65f), 1.2f);
 		DrawCenteredLine(TEXT("same seed, same city - it will be waiting"),
 			CenterY + 34, FLinearColor(0.55f, 0.52f, 0.48f), 1.0f);
+		DrawCenteredLine(TEXT("[R] go back in      [F10] quit"),
+			CenterY + 78, FLinearColor(0.75f, 0.72f, 0.65f), 1.05f);
 		return;
 	}
 	if (Run != nullptr && Run->IsWon())
@@ -76,6 +78,8 @@ void AFCHUD::DrawHUD()
 	{
 		DrawRect(FLinearColor(0, 0, 0, 0.6f), 0, 0, Canvas->SizeX, Canvas->SizeY);
 		DrawCenteredLine(TEXT("PAUSED"), CenterY - 30, FLinearColor(0.9f, 0.87f, 0.8f), 2.0f);
+		DrawCenteredLine(TEXT("[Esc] resume      [F10] quit"),
+			CenterY + 16, FLinearColor(0.6f, 0.58f, 0.52f), 1.05f);
 		return;
 	}
 	if (Player == nullptr)

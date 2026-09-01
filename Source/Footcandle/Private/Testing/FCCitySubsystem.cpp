@@ -14,6 +14,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "AI/FCDirectorSubsystem.h"
 #include "AI/FCListener.h"
 #include "Footcandle.h"
 #include "Noise/FCNoiseSubsystem.h"
@@ -26,6 +27,13 @@
 
 using namespace FC::Gen;
 
+namespace
+{
+	// The auto-run seed persists across in-process restarts (R after death:
+	// "same seed, same city - it will be waiting"). A fresh launch rolls new.
+	uint64 GAutoRunSeed = 0;
+}
+
 void UFCCitySubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
@@ -33,11 +41,39 @@ void UFCCitySubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	{
 		return;
 	}
+	const TCHAR* CommandLine = FCommandLine::Get();
 	FString SeedString;
-	if (FParse::Value(FCommandLine::Get(), TEXT("fccity="), SeedString))
+	if (FParse::Value(CommandLine, TEXT("fccity="), SeedString))
 	{
-		SpawnFromSeed(FCString::Strtoui64(*SeedString, nullptr, 10));
+		SpawnFromSeed(FCString::Strtoui64(*SeedString, nullptr, 10),
+			FParse::Param(CommandLine, TEXT("fcrun")),
+			FParse::Param(CommandLine, TEXT("fclistener")),
+			FParse::Param(CommandLine, TEXT("fcrain")));
+		return;
 	}
+
+	// THE DEFAULT BOOT PATH: double-clicking the exe with no flags starts a
+	// run in a fresh city - the roguelike promise. Test scenes still own
+	// their flags.
+	const bool bAnyTestScene =
+		FParse::Param(CommandLine, TEXT("fcdevscene"))
+		|| FParse::Param(CommandLine, TEXT("fcaddress"))
+		|| FParse::Value(CommandLine, TEXT("fcgenbuilding="), SeedString);
+	if (bAnyTestScene)
+	{
+		return;
+	}
+
+	if (GAutoRunSeed == 0)
+	{
+		GAutoRunSeed = FPlatformTime::Cycles64() | 1ull; // gameplay-side RNG only - never generation-internal
+	}
+	UE_LOG(LogFootcandle, Display, TEXT("[FCCITY] AUTO-RUN seed %llu"), GAutoRunSeed);
+	if (UFCDirectorSubsystem* Director = InWorld.GetSubsystem<UFCDirectorSubsystem>())
+	{
+		Director->EnableNow();
+	}
+	SpawnFromSeed(GAutoRunSeed, /*bRunLayer*/ true, /*bListener*/ true, /*bRain*/ false);
 }
 
 void UFCCitySubsystem::Deinitialize()
@@ -62,7 +98,8 @@ int32 UFCCitySubsystem::CountLotsWithShell() const
 	return Count;
 }
 
-bool UFCCitySubsystem::SpawnFromSeed(const uint64 Seed)
+bool UFCCitySubsystem::SpawnFromSeed(const uint64 Seed, const bool bRunLayer,
+	const bool bListener, const bool bRain)
 {
 	if (bSpawned)
 	{
@@ -152,7 +189,7 @@ bool UFCCitySubsystem::SpawnFromSeed(const uint64 Seed)
 	// street substation. Streets START dark; restoring power is a condition,
 	// which makes the whole district navigable and lethal at once (ROADMAP
 	// 4.3 - the strongest expression of P4). ---
-	if (FParse::Param(FCommandLine::Get(), TEXT("fcrun")))
+	if (bRunLayer)
 	{
 		FActorSpawnParameters Params;
 		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -217,7 +254,7 @@ bool UFCCitySubsystem::SpawnFromSeed(const uint64 Seed)
 	// --- Weather (-fcrain): rain raises the ambient noise floor (ROADMAP
 	// 7.2) - cover for you, mobility for the Listener. Visual rain rides the
 	// art pass; the SYSTEM ships now. ---
-	if (FParse::Param(FCommandLine::Get(), TEXT("fcrain")))
+	if (bRain)
 	{
 		if (UFCNoiseSubsystem* Noise = World->GetSubsystem<UFCNoiseSubsystem>())
 		{
@@ -225,8 +262,8 @@ bool UFCCitySubsystem::SpawnFromSeed(const uint64 Seed)
 			UE_LOG(LogFootcandle, Display, TEXT("[FCCITY] rain: ambient noise floor 12"));
 		}
 	}
-	// --- The Listener (-fclistener): the sound hunter on the mid street ---
-	if (FParse::Param(FCommandLine::Get(), TEXT("fclistener")))
+	// --- The Listener: the sound hunter on the mid street ---
+	if (bListener)
 	{
 		FActorSpawnParameters Params;
 		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
