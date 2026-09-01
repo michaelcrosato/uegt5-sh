@@ -26,6 +26,9 @@ struct FFCTestStation
 //   fc.Tour [OutDir] [quit] - screenshot every station, optionally quit after
 // Command line:
 //   -fctour=<OutDir>        - auto-run the tour after world start, then quit
+//   -fcflashcheck           - with -fctour: kill every light in the world
+//                             except the player's flashlight and tour with
+//                             the beam on - the lighting-in-anger audit
 UCLASS()
 class FOOTCANDLE_API UFCTestStationSubsystem : public UWorldSubsystem
 {
@@ -44,6 +47,9 @@ public:
 private:
 	bool TickTour(float DeltaTime);
 	void FinishTour();
+	void ApplyFlashlightOnly();
+
+	bool bFlashCheckPending = false;
 
 	TArray<FFCTestStation> Stations;
 

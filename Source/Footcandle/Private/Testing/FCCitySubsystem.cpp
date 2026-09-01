@@ -163,7 +163,7 @@ bool UFCCitySubsystem::SpawnFromSeed(const uint64 Seed, const bool bRunLayer,
 			PP->Settings.bOverride_AutoExposureMinBrightness = true;
 			PP->Settings.AutoExposureMinBrightness = 0.02f;
 			PP->Settings.bOverride_AutoExposureMaxBrightness = true;
-			PP->Settings.AutoExposureMaxBrightness = 0.18f;
+			PP->Settings.AutoExposureMaxBrightness = 1.5f; // see address scene note
 			PP->Settings.bOverride_AutoExposureBias = true;
 			PP->Settings.AutoExposureBias = -0.4f;
 		}

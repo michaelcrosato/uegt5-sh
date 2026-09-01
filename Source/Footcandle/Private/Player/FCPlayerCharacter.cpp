@@ -76,9 +76,9 @@ AFCPlayerCharacter::AFCPlayerCharacter()
 	// origin would block its own beam), casting no shadow of its own.
 	TorchBody = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TorchBody"));
 	TorchBody->SetupAttachment(Camera);
-	TorchBody->SetRelativeLocation(FVector(2.0f, 9.0f, -8.0f));
+	TorchBody->SetRelativeLocation(FVector(6.0f, 10.0f, -9.0f));
 	TorchBody->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f)); // Z axis -> forward
-	TorchBody->SetRelativeScale3D(FVector(0.045f, 0.045f, 0.18f));
+	TorchBody->SetRelativeScale3D(FVector(0.03f, 0.03f, 0.11f)); // tip stays behind the beam origin
 	TorchBody->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	TorchBody->CastShadow = false;
 
@@ -124,6 +124,9 @@ void AFCPlayerCharacter::BeginPlay()
 	Flashlight->SetInnerConeAngle(Tuning->FlashlightInnerCone);
 	Flashlight->SetOuterConeAngle(Tuning->FlashlightOuterCone);
 	Flashlight->SetAttenuationRadius(Tuning->FlashlightRange);
+	// Old incandescent torch, not studio white (flash-check audit): the warm
+	// tint is what separates the beam from moonlight and blown highlights.
+	Flashlight->SetLightColor(FLinearColor(1.0f, 0.88f, 0.72f));
 	// The beam must be VISIBLE IN AIR (playtest: "only shows up close to a
 	// wall") - strong volumetric scatter; the scenes carry volumetric fog.
 	Flashlight->SetVolumetricScatteringIntensity(8.0f);
@@ -528,6 +531,14 @@ void AFCPlayerCharacter::OnFlashlightToggle(const FInputActionValue&)
 	EmitPlayerNoise(Tuning->NoiseFlashlightClick, TEXT("Noise.Source.FlashlightClick"));
 }
 
+#if !UE_BUILD_SHIPPING
+void AFCPlayerCharacter::TestSetFlashlight(const bool bOn)
+{
+	bFlashlightOn = bOn;
+	Flashlight->SetVisibility(bOn);
+}
+#endif
+
 void AFCPlayerCharacter::OnVault(const FInputActionValue&)
 {
 	if (bVaulting || HealthState == EFCHealthState::Dead)
@@ -697,6 +708,12 @@ void AFCPlayerCharacter::UpdateFlashlight(const float DeltaSeconds)
 		Registry->SetActiveBeam(this, Flashlight->GetComponentLocation(),
 			Camera->GetForwardVector(), UFCTuningSettings::Get()->FlashlightRange, bFlashlightOn);
 	}
+	// The beam origin sits INSIDE the hidden shadow proxy, which fully
+	// eclipsed the flashlight's surface lighting (found by -fcflashcheck: a
+	// lit torch, a pitch-black door). While the torch is on, your body stops
+	// casting; the beam's world shadows are the point. Off, the proxy shadow
+	// (decision #18) returns.
+	ShadowProxy->SetCastShadow(!bFlashlightOn);
 	if (!bFlashlightOn)
 	{
 		return;

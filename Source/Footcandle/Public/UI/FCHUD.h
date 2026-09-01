@@ -20,6 +20,7 @@ public:
 	virtual void DrawHUD() override;
 
 private:
-	void DrawCenteredLine(const FString& Text, float Y, const FLinearColor& Color, float Scale);
+	void DrawCenteredLine(const FString& Text, float Y, const FLinearColor& Color, float Scale,
+		bool bShadow = false);
 	uint64 ResolveSeed() const;
 };

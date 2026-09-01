@@ -74,6 +74,7 @@ public:
 	// Scripted-smoke hooks (FCM1Smoke) - never compiled into shipping.
 	bool TestVault() { return TryStartVault(); }
 	void TestSetSprint(const bool bSprint) { bWantsSprint = bSprint; }
+	void TestSetFlashlight(bool bOn);
 
 	// Dev mode (fc.DevMode, F1): tools a dev wants on hand.
 	bool bGodMode = false;

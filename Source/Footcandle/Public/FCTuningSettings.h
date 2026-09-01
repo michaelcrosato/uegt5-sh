@@ -97,11 +97,11 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Flashlight", meta = (ToolTip = "Playtest-tuned up from 900: the beam must READ at range, not just at arm's length"))
 	float FlashlightIntensityCandela = 1700.0f;
 
-	UPROPERTY(config, EditAnywhere, Category = "Flashlight")
-	float FlashlightInnerCone = 13.0f;
+	UPROPERTY(config, EditAnywhere, Category = "Flashlight", meta = (ToolTip = "Tight hot core; the wide soft skirt does the falloff (flash-check audit)"))
+	float FlashlightInnerCone = 7.0f;
 
-	UPROPERTY(config, EditAnywhere, Category = "Flashlight")
-	float FlashlightOuterCone = 25.0f;
+	UPROPERTY(config, EditAnywhere, Category = "Flashlight", meta = (ToolTip = "Wide skirt so the disc grades instead of plateauing"))
+	float FlashlightOuterCone = 31.0f;
 
 	UPROPERTY(config, EditAnywhere, Category = "Flashlight")
 	float FlashlightRange = 3400.0f;

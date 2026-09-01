@@ -116,9 +116,14 @@ bool UFCShellSmokeSubsystem::Tick(const float DeltaTime)
 			const IConsoleVariable* FOVVar = IConsoleManager::Get().FindConsoleVariable(TEXT("fc.Camera.FOV"));
 			const float Before = FOVVar != nullptr ? FOVVar->GetFloat() : 0.0f;
 			Shell->OnMenuDown(); Shell->OnMenuDown(); // to Field of view
-			Shell->OnMenuAdjust(+1);
+			// Repeated runs ratchet the SAVED value onto a clamp edge (110);
+			// adjust in whichever direction has room so the check is about
+			// the plumbing, not the persisted state.
+			const int32 Direction = Before >= 105.0f ? -1 : +1;
+			Shell->OnMenuAdjust(Direction);
 			const float After = FOVVar != nullptr ? FOVVar->GetFloat() : 0.0f;
-			Check(TEXT("Shell: adjusting FOV moved the cvar"), After > Before);
+			Check(TEXT("Shell: adjusting FOV moved the cvar"),
+				Direction > 0 ? After > Before : After < Before);
 			Step = 4;
 			StepTime = 0.0f;
 		}

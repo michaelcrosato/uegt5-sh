@@ -1,8 +1,11 @@
 #include "Testing/FCTestStationSubsystem.h"
 
+#include "Components/LightComponent.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
 #include "Footcandle.h"
+#include "Player/FCPlayerCharacter.h"
+#include "UObject/UObjectIterator.h"
 #include "Misc/App.h"
 #include "GPUProfiler.h"
 #include "RenderCore.h"
@@ -162,6 +165,7 @@ void UFCTestStationSubsystem::StartTour(const FString& OutputDir, const bool bQu
 	TourStationIndex = 0;
 	TourPhase = ETourPhase::Settling;
 	TourFramesRemaining = CVarFCTourSettleFrames.GetValueOnGameThread();
+	bFlashCheckPending = FParse::Param(FCommandLine::Get(), TEXT("fcflashcheck"));
 	TeleportToStation(Stations[0].Name);
 	UE_LOG(LogFootcandle, Display, TEXT("[FCTEST] Tour started: %d stations -> %s"),
 		Stations.Num(), *TourOutputDir);
@@ -175,6 +179,14 @@ bool UFCTestStationSubsystem::TickTour(float /*DeltaTime*/)
 	if (TourPhase == ETourPhase::Idle)
 	{
 		return false;
+	}
+
+	// Flash-check blackout runs on the first tour tick, after every scene
+	// subsystem's BeginPlay has finished spawning its lights.
+	if (bFlashCheckPending)
+	{
+		bFlashCheckPending = false;
+		ApplyFlashlightOnly();
 	}
 
 	// While sampling, accumulate thread/GPU timings every frame.
@@ -241,6 +253,35 @@ bool UFCTestStationSubsystem::TickTour(float /*DeltaTime*/)
 	TourPhase = ETourPhase::Settling;
 	TourFramesRemaining = CVarFCTourSettleFrames.GetValueOnGameThread();
 	return true;
+}
+
+void UFCTestStationSubsystem::ApplyFlashlightOnly()
+{
+#if !UE_BUILD_SHIPPING
+	UWorld* World = GetWorld();
+	APlayerController* PC = World->GetFirstPlayerController();
+	AFCPlayerCharacter* Player = PC != nullptr ? Cast<AFCPlayerCharacter>(PC->GetPawn()) : nullptr;
+	int32 Killed = 0;
+	for (TObjectIterator<ULightComponent> It; It; ++It)
+	{
+		ULightComponent* Light = *It;
+		if (Light->GetWorld() != World || (Player != nullptr && Light->GetOwner() == Player))
+		{
+			continue; // the flashlight (and only the flashlight) survives
+		}
+		if (Light->IsVisible())
+		{
+			Light->SetVisibility(false);
+			++Killed;
+		}
+	}
+	if (Player != nullptr)
+	{
+		Player->TestSetFlashlight(true);
+	}
+	UE_LOG(LogFootcandle, Display,
+		TEXT("[FCTEST] flash-check: %d lights extinguished, flashlight forced on"), Killed);
+#endif
 }
 
 void UFCTestStationSubsystem::FinishTour()

@@ -21,12 +21,20 @@ static TAutoConsoleVariable<int32> CVarFCHUDControls(
 	TEXT("Contextual control strip at the bottom (ROADMAP 11.3): 1 on, 0 off."));
 
 void AFCHUD::DrawCenteredLine(const FString& Text, const float Y,
-	const FLinearColor& Color, const float Scale)
+	const FLinearColor& Color, const float Scale, const bool bShadow)
 {
 	float Width = 0.0f;
 	float Height = 0.0f;
 	GetTextSize(Text, Width, Height, GEngine->GetLargeFont(), Scale);
-	DrawText(Text, Color, (Canvas->SizeX - Width) * 0.5f, Y, GEngine->GetLargeFont(), Scale);
+	const float X = (Canvas->SizeX - Width) * 0.5f;
+	if (bShadow)
+	{
+		// Dark backing pass: keeps the line readable over a blown-out light
+		// source AND over pitch dark (playtest: white-on-white prompts).
+		DrawText(Text, FLinearColor(0.0f, 0.0f, 0.0f, 0.85f), X + 2.0f, Y + 2.0f,
+			GEngine->GetLargeFont(), Scale);
+	}
+	DrawText(Text, Color, X, Y, GEngine->GetLargeFont(), Scale);
 }
 
 uint64 AFCHUD::ResolveSeed() const
@@ -177,8 +185,12 @@ void AFCHUD::DrawHUD()
 		if (const AActor* Target = Interaction->GetCurrentTarget())
 		{
 			const FString Verb = Cast<IFCInteractable>(Target)->GetInteractionVerb();
+			// Mint-cyan on a black drop shadow: distinct from every light
+			// color in the game (sodium amber, warm bulbs, red LEDs) and the
+			// shadow keeps it alive over both glare and pitch dark.
 			DrawCenteredLine(FString::Printf(TEXT("[F] %s"), *Verb),
-				CenterY + Canvas->SizeY * 0.12f, FLinearColor(0.92f, 0.9f, 0.82f), 1.15f);
+				CenterY + Canvas->SizeY * 0.12f, FLinearColor(0.4f, 0.95f, 0.8f), 1.15f,
+				/*bShadow*/ true);
 		}
 	}
 

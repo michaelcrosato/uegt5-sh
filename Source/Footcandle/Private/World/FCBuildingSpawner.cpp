@@ -280,17 +280,41 @@ namespace FC::Spawn
 		}
 
 		// Lights - visible FIXTURES, never bare light actors (decision #29).
-		// Most rooms hang a ceiling bulb; a deterministic few instead glow
-		// from a TV on the floor - colder, lower, a different kind of room.
+		// Most rooms hang a low-wattage bulb in a CORNER, styled per room
+		// from the seed (survival-horror relight, decision #30): dim, varied
+		// color, the odd hum or gutter - corner placement rakes long shadows
+		// across the room instead of flattening it from the center. A
+		// deterministic few rooms instead glow from a TV on the floor.
+		const FLinearColor BulbPalette[] = {
+			FLinearColor(1.0f, 0.72f, 0.45f),  // warm amber
+			FLinearColor(0.95f, 0.88f, 0.72f), // dingy warm white
+			FLinearColor(0.68f, 0.82f, 0.62f), // sickly green
+			FLinearColor(0.60f, 0.70f, 0.95f), // cold blue-grey
+		};
 		for (const FFCGenLight& Light : Building.Lights)
 		{
 			const bool bTV = (Light.Room % 5 == 3);
-			// Fixture origin: the generated position IS the light position -
-			// bulb style offsets its light -6cm, TV drops to the floor slab.
+			const uint64 H = Building.Seed
+				^ (static_cast<uint64>(Light.Room) * 0x9E3779B97F4A7C15ull);
+			// Fixture origin: bulb style offsets its light -6cm from the
+			// origin; TV drops to the floor slab.
 			const float FloorBaseZ = Light.Position.Z - (FloorHeight - 60.0f);
-			const FVector FixtureOrigin = Origin + (bTV
+			FVector FixtureOrigin = Origin + (bTV
 				? FVector(Light.Position.X, Light.Position.Y, FloorBaseZ + 18.0f)
 				: Light.Position + FVector(0, 0, 6.0f));
+			if (!bTV && Building.Rooms.IsValidIndex(Light.Room))
+			{
+				// Corner pick, 70cm off the walls (skip rooms too small).
+				const FFCGenRoom& Room = Building.Rooms[Light.Room];
+				const float MinX = Room.CellMin.X * CellSize, MaxX = Room.CellMax.X * CellSize;
+				const float MinY = Room.CellMin.Y * CellSize, MaxY = Room.CellMax.Y * CellSize;
+				constexpr float Inset = 70.0f;
+				if (MaxX - MinX > 2.0f * Inset && MaxY - MinY > 2.0f * Inset)
+				{
+					FixtureOrigin.X = Origin.X + ((H & 1) ? MaxX - Inset : MinX + Inset);
+					FixtureOrigin.Y = Origin.Y + ((H & 2) ? MaxY - Inset : MinY + Inset);
+				}
+			}
 			AFCLightFixture* Fixture = World->SpawnActor<AFCLightFixture>(FixtureOrigin, FRotator::ZeroRotator, Params);
 			if (Fixture != nullptr)
 			{
@@ -298,13 +322,17 @@ namespace FC::Spawn
 				{
 					Fixture->Configure(EFCFixtureStyle::TV,
 						FLinearColor(0.55f, 0.68f, 1.0f), 20.0f, 900.0f,
-						EFCFlickerStyle::Guttering, /*bWithFlicker*/ true,
-						/*FlickerSeed*/ static_cast<uint64>(Light.Room) * 977u + 5u);
+						EFCFlickerStyle::Guttering, /*bWithFlicker*/ true, /*FlickerSeed*/ H);
 				}
 				else
 				{
-					Fixture->Configure(EFCFixtureStyle::CeilingBulb,
-						FLinearColor(1.0f, 0.87f, 0.72f), 50.0f, 1200.0f);
+					const float Candela = 10.0f + static_cast<float>((H >> 2) % 12u);
+					const FLinearColor Color = BulbPalette[(H >> 6) % 4u];
+					const bool bHum = ((H >> 8) % 7u) == 0u;      // occasional mains hum
+					const bool bGutter = ((H >> 8) % 13u) == 5u;  // rare dying bulb
+					Fixture->Configure(EFCFixtureStyle::CeilingBulb, Color, Candela, 1000.0f,
+						bGutter ? EFCFlickerStyle::Guttering : EFCFlickerStyle::MainsHum,
+						/*bWithFlicker*/ bHum || bGutter, /*FlickerSeed*/ H);
 				}
 				Out.DetailActors.Add(Fixture);
 			}

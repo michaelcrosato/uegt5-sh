@@ -121,7 +121,7 @@ bool UFCM1SmokeSubsystem::Tick(float /*DeltaTime*/)
 
 	case 1: // walk ~3s of frames; footsteps should fire (stride 170cm)
 		Player->AddMovementInput(FVector(0, 1, 0), 1.0f);
-		if (Frame >= 210)
+		if (Frame >= 330)
 		{
 			UE_LOG(LogFootcandle, Display,
 				TEXT("[FCM1SMOKE] walk debug: start=%s now=%s vel=%s grounded=%d mode=%d maxspeed=%.0f"),
@@ -140,7 +140,7 @@ bool UFCM1SmokeSubsystem::Tick(float /*DeltaTime*/)
 
 	case 2: // sprint 60 frames; stamina must drain
 		Player->AddMovementInput(FVector(0, 1, 0), 1.0f);
-		if (Frame >= 270)
+		if (Frame >= 390)
 		{
 			Player->TestSetSprint(false);
 			Check(TEXT("Stamina: drained while sprinting"),
@@ -161,7 +161,7 @@ bool UFCM1SmokeSubsystem::Tick(float /*DeltaTime*/)
 		break;
 
 	case 3: // give the quiet swing time, then verify it opened
-		if (Frame >= 470)
+		if (Frame >= 590)
 		{
 			const AFCDoor* Door = FindNearest<AFCDoor>(World, FVector(450, 0, 0));
 			Check(TEXT("Door: opened after quiet swing"), Door != nullptr && Door->IsOpen());
@@ -227,7 +227,7 @@ bool UFCM1SmokeSubsystem::Tick(float /*DeltaTime*/)
 		break;
 
 	case 4: // wait until grounded after the street teleport, then vault
-		if (Frame >= 480 && bGrounded)
+		if (Frame >= 600 && bGrounded)
 		{
 			// 80 cm obstacle directly north of the player.
 			const FVector Min(160, -320, 0);
@@ -249,13 +249,13 @@ bool UFCM1SmokeSubsystem::Tick(float /*DeltaTime*/)
 				}
 			}
 			Check(TEXT("Vault: started against 80cm crate"), Player->TestVault());
-			Frame = 480;
+			Frame = 600;
 			Step = 5;
 		}
 		break;
 
 	case 5: // vault completes in ~0.35s; then M3 propagation checks
-		if (Frame >= 560)
+		if (Frame >= 680)
 		{
 			Check(TEXT("Vault: landed on/past the crate"),
 				Player->GetActorLocation().Y > -330.0f
@@ -280,7 +280,7 @@ bool UFCM1SmokeSubsystem::Tick(float /*DeltaTime*/)
 				{
 					Interior->Interact(Player, /*bQuiet*/ false);
 				}
-				Frame = 560;
+				Frame = 680;
 				Step = 6;
 				// Stash for the comparison after the swing.
 				MoveStart = FVector(EastClosed, StreetClosed, 0);
@@ -294,7 +294,7 @@ bool UFCM1SmokeSubsystem::Tick(float /*DeltaTime*/)
 		break;
 
 	case 6: // interior door has swung open; re-measure propagation
-		if (Frame >= 640)
+		if (Frame >= 760)
 		{
 			if (UFCNoiseSubsystem* Noise = World->GetSubsystem<UFCNoiseSubsystem>())
 			{
@@ -320,25 +320,25 @@ bool UFCM1SmokeSubsystem::Tick(float /*DeltaTime*/)
 			// Crouch-height regression (playtest bug: eye went under the
 			// floor): stand on the street, crouch, measure the camera.
 			Player->TeleportTo(FVector(500, -600, 120), FRotator(0, 90, 0), false, true);
-			Frame = 640;
+			Frame = 760;
 			Step = 7;
 		}
 		break;
 
 	case 7:
-		if (Frame >= 700 && bGrounded)
+		if (Frame >= 820 && bGrounded)
 		{
 			const float TestFloorZ = Player->GetActorLocation().Z
 				- Player->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 			Player->TestToggleCrouch();
-			Frame = 700;
+			Frame = 820;
 			Step = 8;
 			MoveStart = FVector(TestFloorZ, 0, 0); // stash floor height
 		}
 		break;
 
 	case 8: // crouched eye must sit near 105cm over the floor - never sunken
-		if (Frame >= 760)
+		if (Frame >= 880)
 		{
 			const float TestFloorZ = MoveStart.X;
 			const float EyeAboveFloor = Player->TestGetCameraLocation().Z - TestFloorZ;
@@ -356,22 +356,22 @@ bool UFCM1SmokeSubsystem::Tick(float /*DeltaTime*/)
 			{
 				Controller->SetControlRotation(FRotator(0, 0, 0));
 			}
-			Frame = 760;
+			Frame = 880;
 			Step = 9;
 		}
 		break;
 
 	case 9:
-		if (Frame >= 820 && bGrounded)
+		if (Frame >= 940 && bGrounded)
 		{
 			Check(TEXT("Window: climb-through starts at the sill"), Player->TestVault());
-			Frame = 820;
+			Frame = 940;
 			Step = 10;
 		}
 		break;
 
 	case 10: // arc completes; the player must be INSIDE the west room
-		if (Frame >= 900)
+		if (Frame >= 1020)
 		{
 			Check(TEXT("Window: landed inside through the opening"),
 				Player->GetActorLocation().X > 20.0f

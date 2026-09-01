@@ -214,12 +214,16 @@ void UFCAddressSceneSubsystem::SpawnScene()
 	{
 		FActorSpawnParameters Params;
 		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		// West room bulb (light lands at the old capture-tuned Z=270).
+		// West room bulb: LOW-WATTAGE, warm amber, in the NW corner with a
+		// gentle mains hum (survival-horror relight, decision #30). Corner
+		// placement rakes shadows the length of the room; 60cd from the
+		// center flattened it into a showroom.
 		if (AFCLightFixture* Fixture = World->SpawnActor<AFCLightFixture>(
-			FVector(300, 300, 276), FRotator::ZeroRotator, Params))
+			FVector(120, 480, 276), FRotator::ZeroRotator, Params))
 		{
 			Fixture->Configure(EFCFixtureStyle::CeilingBulb,
-				FLinearColor(1.0f, 0.88f, 0.75f), 60.0f, 1400.0f);
+				FLinearColor(1.0f, 0.72f, 0.45f), 16.0f, 1100.0f,
+				EFCFlickerStyle::MainsHum, /*bWithFlicker*/ true, /*Seed*/ 11ull);
 			WestRoomLight = Fixture->GetLightComponent();
 		}
 		// Stair-room emergency LED: dim, red, high - and failing (the
@@ -231,12 +235,13 @@ void UFCAddressSceneSubsystem::SpawnScene()
 				FLinearColor(1.0f, 0.22f, 0.15f), 18.0f, 900.0f,
 				EFCFlickerStyle::FailingTube, /*bWithFlicker*/ true, /*Seed*/ 2ull);
 		}
-		// Upper room bulb.
+		// Upper room bulb: dim, sickly green, far corner - a different
+		// temperature per room so the palette reads (decision #30).
 		if (AFCLightFixture* Fixture = World->SpawnActor<AFCLightFixture>(
-			FVector(450, 300, FloorZ + 266), FRotator::ZeroRotator, Params))
+			FVector(720, 160, FloorZ + 266), FRotator::ZeroRotator, Params))
 		{
 			Fixture->Configure(EFCFixtureStyle::CeilingBulb,
-				FLinearColor(1.0f, 0.85f, 0.7f), 55.0f, 1400.0f);
+				FLinearColor(0.68f, 0.82f, 0.62f), 10.0f, 1000.0f);
 		}
 		// Sodium streetlight on a real pole, head at the old light position.
 		if (AFCLightFixture* Fixture = World->SpawnActor<AFCLightFixture>(
@@ -289,7 +294,9 @@ void UFCAddressSceneSubsystem::SpawnScene()
 			PP->Settings.bOverride_AutoExposureMinBrightness = true;
 			PP->Settings.AutoExposureMinBrightness = 0.02f;
 			PP->Settings.bOverride_AutoExposureMaxBrightness = true;
-			PP->Settings.AutoExposureMaxBrightness = 0.18f;
+			// Max raised from 0.18 (flash-check audit): the low cap nuked the
+			// flashlight disc to clipped white; darkness is guarded by MIN.
+			PP->Settings.AutoExposureMaxBrightness = 1.5f;
 			PP->Settings.bOverride_AutoExposureBias = true;
 			PP->Settings.AutoExposureBias = -0.4f;
 		}
@@ -337,7 +344,7 @@ void UFCAddressSceneSubsystem::SpawnScene()
 	{
 		Stations->RegisterStation(TEXT("AddrStreet"), FVector(500, -900, 260), FRotator(-8.0f, 90.0f, 0.0f));
 		Stations->RegisterStation(TEXT("AddrDoorway"), FVector(500, -220, 165), FRotator(-2.0f, 90.0f, 0.0f));
-		Stations->RegisterStation(TEXT("AddrWestRoom"), FVector(150, 120, 165), FRotator(0.0f, 55.0f, 0.0f));
+		Stations->RegisterStation(TEXT("AddrWestRoom"), FVector(320, 90, 165), FRotator(4.0f, 100.0f, 0.0f));
 		Stations->RegisterStation(TEXT("AddrStairs"), FVector(660, 140, 165), FRotator(8.0f, 65.0f, 0.0f));
 		Stations->RegisterStation(TEXT("AddrUpper"), FVector(160, 480, FloorZ + 165), FRotator(-6.0f, -35.0f, 0.0f));
 		Stations->RegisterStation(TEXT("AddrWindowSpill"), FVector(-420, 300, 140), FRotator(4.0f, 0.0f, 0.0f));
