@@ -10,6 +10,11 @@ static TAutoConsoleVariable<float> CVarFCCameraMotionScale(
 	TEXT("Global scale on procedural camera motion (bob/breath/dip). ")
 	TEXT("0 disables everything except lean - the accessibility floor."));
 
+static TAutoConsoleVariable<float> CVarFCCameraFOV(
+	TEXT("fc.Camera.FOV"),
+	0.0f,
+	TEXT("Field of view override from the settings menu; 0 = tuning default."));
+
 UFCCameraCraftComponent::UFCCameraCraftComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -20,6 +25,10 @@ void UFCCameraCraftComponent::SetTargets(USceneComponent* InCameraRoot, UCameraC
 {
 	CameraRoot = InCameraRoot;
 	Camera = InCamera;
+	// PLAYTEST ROOT CAUSE: this component used to OVERWRITE the root's
+	// authored +75 eye offset every tick - the standing eye sat at chest
+	// height and crouching drove it under the floor. Preserve the base.
+	BaseRelativeZ = InCameraRoot != nullptr ? InCameraRoot->GetRelativeLocation().Z : 0.0f;
 }
 
 void UFCCameraCraftComponent::NotifyLanded(const float NormalizedImpact)
@@ -81,10 +90,12 @@ void UFCCameraCraftComponent::TickComponent(const float DeltaTime, const ELevelT
 	CameraRoot->SetRelativeLocation(FVector(
 		0.0f,
 		CurrentLeanAmount * Tuning->LeanOffset,
-		CurrentEyeOffset + Bob + Breath + DipScaled));
+		BaseRelativeZ + CurrentEyeOffset + Bob + Breath + DipScaled));
 	CameraRoot->SetRelativeRotation(FRotator(0.0f, 0.0f, CurrentLeanAmount * Tuning->LeanRoll));
 
-	// Sprint FOV nudge.
-	const float TargetFOV = Tuning->BaseFOV + (bSprinting ? Tuning->SprintFOVAdd * SpeedAlpha : 0.0f);
+	// Sprint FOV nudge on top of the settings-menu base FOV.
+	const float SettingsFOV = CVarFCCameraFOV.GetValueOnGameThread();
+	const float BaseFOV = SettingsFOV >= 70.0f ? SettingsFOV : Tuning->BaseFOV;
+	const float TargetFOV = BaseFOV + (bSprinting ? Tuning->SprintFOVAdd * SpeedAlpha : 0.0f);
 	Camera->SetFieldOfView(FMath::FInterpTo(Camera->FieldOfView, TargetFOV, DeltaTime, 6.0f));
 }

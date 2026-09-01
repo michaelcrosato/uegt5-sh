@@ -2,6 +2,8 @@
 
 #include "AI/FCWatcher.h"
 #include "Components/DirectionalLightComponent.h"
+#include "Components/ExponentialHeightFogComponent.h"
+#include "Engine/ExponentialHeightFog.h"
 #include "Components/SpotLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DirectionalLight.h"
@@ -92,6 +94,13 @@ bool UFCGenBuildingSubsystem::SpawnFromSeed(const uint64 Seed)
 
 	// --- Environment ---
 	SpawnBox(FVector(-3000, -3000, -20), FVector(W + 3000, D + 3000, 0));
+	if (AExponentialHeightFog* Fog = World->SpawnActor<AExponentialHeightFog>(FVector::ZeroVector, FRotator::ZeroRotator))
+	{
+		UExponentialHeightFogComponent* FogComponent = Fog->GetComponent();
+		FogComponent->SetMobility(EComponentMobility::Movable);
+		FogComponent->SetFogDensity(0.018f);
+		FogComponent->SetVolumetricFog(true);
+	}
 	{
 		ADirectionalLight* Moon = World->SpawnActor<ADirectionalLight>(FVector(0, 0, 2000), FRotator::ZeroRotator);
 		if (Moon != nullptr)

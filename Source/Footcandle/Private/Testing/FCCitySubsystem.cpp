@@ -1,9 +1,11 @@
 #include "Testing/FCCitySubsystem.h"
 
 #include "Components/DirectionalLightComponent.h"
+#include "Components/ExponentialHeightFogComponent.h"
 #include "Components/SpotLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DirectionalLight.h"
+#include "Engine/ExponentialHeightFog.h"
 #include "Engine/PostProcessVolume.h"
 #include "Engine/SpotLight.h"
 #include "Engine/StaticMesh.h"
@@ -23,6 +25,7 @@
 #include "Objectives/FCRunSubsystem.h"
 #include "Perception/FCLightRegistry.h"
 #include "Testing/FCTestStationSubsystem.h"
+#include "UI/FCShellSubsystem.h"
 #include "World/FCBreakerPanel.h"
 
 using namespace FC::Gen;
@@ -64,12 +67,21 @@ void UFCCitySubsystem::OnWorldBeginPlay(UWorld& InWorld)
 		return;
 	}
 
+	// Flagless boot goes through the front door (playtest ask: title screen).
+	if (UFCShellSubsystem* Shell = InWorld.GetGameInstance()->GetSubsystem<UFCShellSubsystem>())
+	{
+		Shell->EnterTitle(this);
+	}
+}
+
+void UFCCitySubsystem::SpawnAutoRun()
+{
 	if (GAutoRunSeed == 0)
 	{
 		GAutoRunSeed = FPlatformTime::Cycles64() | 1ull; // gameplay-side RNG only - never generation-internal
 	}
 	UE_LOG(LogFootcandle, Display, TEXT("[FCCITY] AUTO-RUN seed %llu"), GAutoRunSeed);
-	if (UFCDirectorSubsystem* Director = InWorld.GetSubsystem<UFCDirectorSubsystem>())
+	if (UFCDirectorSubsystem* Director = GetWorld()->GetSubsystem<UFCDirectorSubsystem>())
 	{
 		Director->EnableNow();
 	}
@@ -155,6 +167,15 @@ bool UFCCitySubsystem::SpawnFromSeed(const uint64 Seed, const bool bRunLayer,
 			PP->Settings.AutoExposureMaxBrightness = 0.18f;
 			PP->Settings.bOverride_AutoExposureBias = true;
 			PP->Settings.AutoExposureBias = -0.4f;
+		}
+		// Night air: thin volumetric fog so beams and streetlight cones exist
+		// IN AIR, not only on surfaces (playtest: invisible flashlight beam).
+		if (AExponentialHeightFog* Fog = World->SpawnActor<AExponentialHeightFog>(FVector::ZeroVector, FRotator::ZeroRotator))
+		{
+			UExponentialHeightFogComponent* FogComponent = Fog->GetComponent();
+			FogComponent->SetMobility(EComponentMobility::Movable);
+			FogComponent->SetFogDensity(0.018f);
+			FogComponent->SetVolumetricFog(true);
 		}
 	}
 

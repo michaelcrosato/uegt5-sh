@@ -18,13 +18,34 @@
 #include "Interaction/FCInteractionComponent.h"
 #include "Noise/FCNoiseSubsystem.h"
 #include "Perception/FCLightRegistry.h"
+#include "AI/FCWatcher.h"
+#include "Objectives/FCRunSubsystem.h"
 #include "Player/FCCameraCraftComponent.h"
+#include "UI/FCShellSubsystem.h"
 #include "UObject/ConstructorHelpers.h"
 
 static TAutoConsoleVariable<int32> CVarFCPlayerDebug(
 	TEXT("fc.Player.Debug"),
 	0,
 	TEXT("1 = on-screen gait/stamina/battery readout."));
+
+static TAutoConsoleVariable<float> CVarFCSensitivity(
+	TEXT("fc.Input.Sensitivity"),
+	1.0f,
+	TEXT("Mouse look sensitivity multiplier (settings menu)."));
+
+static TAutoConsoleVariable<float> CVarFCInvertY(
+	TEXT("fc.Input.InvertY"),
+	0.0f,
+	TEXT("1 = invert look Y (settings menu)."));
+
+#if !UE_BUILD_SHIPPING
+static TAutoConsoleVariable<int32> CVarFCDevMode(
+	TEXT("fc.DevMode"),
+	0,
+	TEXT("Dev tools (F1): overlay + F3 ghost, F4 god, F5 condition, F6 win, ")
+	TEXT("F7 kill, F8 spawn watcher, F9 debug draws. Never in shipping."));
+#endif
 
 AFCPlayerCharacter::AFCPlayerCharacter()
 {
@@ -68,6 +89,11 @@ AFCPlayerCharacter::AFCPlayerCharacter()
 
 	bUseControllerRotationYaw = true;
 	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
+	// Crouch shrinks the capsule around its center; 55 keeps the eye well
+	// above the sill line and the proxy shadow plausible.
+	GetCharacterMovement()->SetCrouchedHalfHeight(55.0f);
+	GetCharacterMovement()->JumpZVelocity = 430.0f;
+	GetCharacterMovement()->AirControl = 0.12f;
 }
 
 void AFCPlayerCharacter::BeginPlay()
@@ -85,7 +111,9 @@ void AFCPlayerCharacter::BeginPlay()
 	Flashlight->SetInnerConeAngle(Tuning->FlashlightInnerCone);
 	Flashlight->SetOuterConeAngle(Tuning->FlashlightOuterCone);
 	Flashlight->SetAttenuationRadius(Tuning->FlashlightRange);
-	Flashlight->SetVolumetricScatteringIntensity(2.0f);
+	// The beam must be VISIBLE IN AIR (playtest: "only shows up close to a
+	// wall") - strong volumetric scatter; the scenes carry volumetric fog.
+	Flashlight->SetVolumetricScatteringIntensity(8.0f);
 
 	CameraCraft->SetTargets(CameraRoot, Camera);
 
@@ -158,17 +186,79 @@ void AFCPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 	{
 		UEnhancedInputComponent* ShellInput = Cast<UEnhancedInputComponent>(PlayerInputComponent);
 
+		auto GetShell = [this]() -> UFCShellSubsystem*
+		{
+			return GetGameInstance() != nullptr
+				? GetGameInstance()->GetSubsystem<UFCShellSubsystem>() : nullptr;
+		};
+
 		UInputAction* PauseAction = MakeAction(TEXT("IA_Pause"), EInputActionValueType::Boolean);
 		PauseAction->bTriggerWhenPaused = true; // Escape must also UNpause
 		MappingContext->MapKey(PauseAction, EKeys::Escape);
 		ShellInput->BindActionValueLambda(PauseAction, ETriggerEvent::Started,
-			[this](const FInputActionValue&)
+			[this, GetShell](const FInputActionValue&)
 			{
+				if (UFCShellSubsystem* Shell = GetShell())
+				{
+					if (Shell->IsMenuActive())
+					{
+						Shell->OnMenuBack(); // settings->back, intro->skip; title ignores
+						return;
+					}
+				}
 				if (HealthState != EFCHealthState::Dead)
 				{
 					if (APlayerController* PC = Cast<APlayerController>(GetController()))
 					{
 						PC->SetPause(!GetWorld()->IsPaused());
+					}
+				}
+			});
+
+		// Menu navigation (title / settings / intro): arrows + Enter, F to
+		// confirm on the intro card. All fire while paused.
+		auto BindMenuKey = [&](const TCHAR* Name, const FKey Key, TFunction<void(UFCShellSubsystem&)> Handler)
+		{
+			UInputAction* Action = MakeAction(Name, EInputActionValueType::Boolean);
+			Action->bTriggerWhenPaused = true;
+			MappingContext->MapKey(Action, Key);
+			ShellInput->BindActionValueLambda(Action, ETriggerEvent::Started,
+				[GetShell, Handler](const FInputActionValue&)
+				{
+					if (UFCShellSubsystem* Shell = GetShell())
+					{
+						if (Shell->IsMenuActive())
+						{
+							Handler(*Shell);
+						}
+					}
+				});
+		};
+		BindMenuKey(TEXT("IA_MenuUp"), EKeys::Up, [](UFCShellSubsystem& Shell) { Shell.OnMenuUp(); });
+		BindMenuKey(TEXT("IA_MenuDown"), EKeys::Down, [](UFCShellSubsystem& Shell) { Shell.OnMenuDown(); });
+		BindMenuKey(TEXT("IA_MenuLeft"), EKeys::Left, [](UFCShellSubsystem& Shell) { Shell.OnMenuAdjust(-1); });
+		BindMenuKey(TEXT("IA_MenuRight"), EKeys::Right, [](UFCShellSubsystem& Shell) { Shell.OnMenuAdjust(+1); });
+		BindMenuKey(TEXT("IA_MenuConfirm"), EKeys::Enter, [](UFCShellSubsystem& Shell) { Shell.OnMenuConfirm(); });
+		BindMenuKey(TEXT("IA_MenuConfirmF"), EKeys::F, [](UFCShellSubsystem& Shell)
+		{
+			if (Shell.GetState() == EFCShellState::Intro)
+			{
+				Shell.OnMenuConfirm(); // "[F] step into the street"
+			}
+		});
+
+		// F2: settings from the pause card.
+		UInputAction* SettingsAction = MakeAction(TEXT("IA_PauseSettings"), EInputActionValueType::Boolean);
+		SettingsAction->bTriggerWhenPaused = true;
+		MappingContext->MapKey(SettingsAction, EKeys::F2);
+		ShellInput->BindActionValueLambda(SettingsAction, ETriggerEvent::Started,
+			[this, GetShell](const FInputActionValue&)
+			{
+				if (UFCShellSubsystem* Shell = GetShell())
+				{
+					if (!Shell->IsMenuActive() && GetWorld()->IsPaused())
+					{
+						Shell->OpenSettingsFromPause();
 					}
 				}
 			});
@@ -187,6 +277,91 @@ void AFCPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 					PC->ConsoleCommand(TEXT("quit"));
 				}
 			});
+
+#if !UE_BUILD_SHIPPING
+		// --- Dev mode (playtest ask: the tools a dev wants on hand) ---
+		// F1 toggles; the rest act only while fc.DevMode=1. Overlay: FCHUD.
+		auto BindDevKey = [&](const TCHAR* Name, const FKey Key, TFunction<void()> Handler)
+		{
+			UInputAction* Action = MakeAction(Name, EInputActionValueType::Boolean);
+			Action->bTriggerWhenPaused = true;
+			MappingContext->MapKey(Action, Key);
+			ShellInput->BindActionValueLambda(Action, ETriggerEvent::Started,
+				[Handler](const FInputActionValue&) { Handler(); });
+		};
+		static const auto DevModeVar = IConsoleManager::Get().FindConsoleVariable(TEXT("fc.DevMode"));
+		auto DevOn = []() { return DevModeVar != nullptr && DevModeVar->GetInt() != 0; };
+		BindDevKey(TEXT("IA_DevToggle"), EKeys::F1, [this]()
+		{
+			if (DevModeVar != nullptr)
+			{
+				DevModeVar->Set(DevModeVar->GetInt() != 0 ? 0 : 1, ECVF_SetByConsole);
+			}
+		});
+		BindDevKey(TEXT("IA_DevGhost"), EKeys::F3, [this, DevOn]() { if (DevOn()) { ToggleGhost(); } });
+		BindDevKey(TEXT("IA_DevGod"), EKeys::F4, [this, DevOn]()
+		{
+			if (DevOn())
+			{
+				bGodMode = !bGodMode;
+				UE_LOG(LogFootcandle, Display, TEXT("[FCDEV] god %s"), bGodMode ? TEXT("ON") : TEXT("OFF"));
+			}
+		});
+		BindDevKey(TEXT("IA_DevCondition"), EKeys::F5, [this, DevOn]()
+		{
+			if (DevOn())
+			{
+				if (UFCRunSubsystem* Run = GetWorld()->GetSubsystem<UFCRunSubsystem>())
+				{
+					Run->NotifyConditionSatisfied(TEXT("dev F5"));
+				}
+			}
+		});
+		BindDevKey(TEXT("IA_DevWin"), EKeys::F6, [this, DevOn]()
+		{
+			if (DevOn())
+			{
+				if (UFCRunSubsystem* Run = GetWorld()->GetSubsystem<UFCRunSubsystem>())
+				{
+					Run->NotifyExtractionComplete();
+				}
+			}
+		});
+		BindDevKey(TEXT("IA_DevKill"), EKeys::F7, [this, DevOn]()
+		{
+			if (DevOn())
+			{
+				const bool bWasGod = bGodMode;
+				bGodMode = false;
+				ApplyHunterContact(TEXT("dev F7"));
+				ApplyHunterContact(TEXT("You asked for this (F7)."));
+				bGodMode = bWasGod;
+			}
+		});
+		BindDevKey(TEXT("IA_DevSpawnWatcher"), EKeys::F8, [this, DevOn]()
+		{
+			if (DevOn())
+			{
+				const FVector SpawnPos = GetActorLocation() + Camera->GetForwardVector() * 1200.0f + FVector(0, 0, 30);
+				FActorSpawnParameters Params;
+				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+				GetWorld()->SpawnActor<AFCWatcher>(SpawnPos, (-Camera->GetForwardVector()).Rotation(), Params);
+				UE_LOG(LogFootcandle, Display, TEXT("[FCDEV] watcher spawned ahead"));
+			}
+		});
+		BindDevKey(TEXT("IA_DevDebugDraw"), EKeys::F9, [DevOn]()
+		{
+			if (DevOn())
+			{
+				static bool bDraws = false;
+				bDraws = !bDraws;
+				if (IConsoleVariable* NoiseVar = IConsoleManager::Get().FindConsoleVariable(TEXT("fc.Noise.Debug")))
+				{
+					NoiseVar->Set(bDraws ? 1 : 0, ECVF_SetByConsole);
+				}
+			}
+		});
+#endif
 
 		UInputAction* RetryAction = MakeAction(TEXT("IA_Retry"), EInputActionValueType::Boolean);
 		RetryAction->bTriggerWhenPaused = true;
@@ -239,6 +414,15 @@ void AFCPlayerCharacter::OnMove(const FInputActionValue& Value)
 		return;
 	}
 	const FVector2D Axis = Value.Get<FVector2D>();
+#if !UE_BUILD_SHIPPING
+	if (bGhostMode)
+	{
+		// Ghost flies where the camera looks.
+		AddMovementInput(Camera->GetForwardVector(), Axis.Y);
+		AddMovementInput(Camera->GetRightVector(), Axis.X);
+		return;
+	}
+#endif
 	AddMovementInput(GetActorForwardVector(), Axis.Y);
 	AddMovementInput(GetActorRightVector(), Axis.X);
 }
@@ -249,9 +433,11 @@ void AFCPlayerCharacter::OnLook(const FInputActionValue& Value)
 	{
 		return;
 	}
+	const float Sensitivity = FMath::Clamp(CVarFCSensitivity.GetValueOnGameThread(), 0.05f, 5.0f);
+	const float YSign = CVarFCInvertY.GetValueOnGameThread() > 0.5f ? -1.0f : 1.0f;
 	const FVector2D Axis = Value.Get<FVector2D>();
-	AddControllerYawInput(Axis.X);
-	AddControllerPitchInput(Axis.Y);
+	AddControllerYawInput(Axis.X * Sensitivity);
+	AddControllerPitchInput(Axis.Y * Sensitivity * YSign);
 }
 
 void AFCPlayerCharacter::OnSprintStarted(const FInputActionValue&) { bWantsSprint = true; }
@@ -261,6 +447,11 @@ void AFCPlayerCharacter::OnSneakCompleted(const FInputActionValue&) { bWantsSnea
 
 void AFCPlayerCharacter::OnCrouchToggle(const FInputActionValue&)
 {
+	if (HealthState == EFCHealthState::Dead)
+	{
+		return;
+	}
+	const UFCTuningSettings* Tuning = UFCTuningSettings::Get();
 	if (bIsCrouched)
 	{
 		UnCrouch();
@@ -268,9 +459,15 @@ void AFCPlayerCharacter::OnCrouchToggle(const FInputActionValue&)
 	}
 	else
 	{
+		// PLAYTEST BUG (director): the old offset subtracted the full eye
+		// delta ON TOP of the capsule shrink - the camera went under the
+		// floor. The capsule center already drops by (standing - crouched)
+		// half-height; only the REMAINDER belongs on the camera.
+		const float StandingHalf = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 		Crouch();
-		const UFCTuningSettings* Tuning = UFCTuningSettings::Get();
-		CameraCraft->SetEyeHeightOffset(Tuning->CrouchedEyeHeight - Tuning->EyeHeight);
+		const float CrouchedHalf = GetCharacterMovement()->GetCrouchedHalfHeight();
+		CameraCraft->SetEyeHeightOffset(
+			(Tuning->CrouchedEyeHeight - CrouchedHalf) - (Tuning->EyeHeight - StandingHalf));
 	}
 }
 
@@ -311,9 +508,15 @@ void AFCPlayerCharacter::OnFlashlightToggle(const FInputActionValue&)
 
 void AFCPlayerCharacter::OnVault(const FInputActionValue&)
 {
-	if (!bVaulting)
+	if (bVaulting || HealthState == EFCHealthState::Dead)
 	{
-		TryStartVault();
+		return;
+	}
+	// Space is contextual (playtest ask): a ledge or window in reach vaults;
+	// open ground jumps. Jumping is loud on landing - already handled.
+	if (!TryStartVault() && GetCharacterMovement()->IsMovingOnGround() && !bIsCrouched)
+	{
+		Jump();
 	}
 }
 
@@ -351,6 +554,12 @@ float AFCPlayerCharacter::GetPassiveNoiseFloor() const
 
 void AFCPlayerCharacter::ApplyHunterContact(const FString& AttributionSentence)
 {
+#if !UE_BUILD_SHIPPING
+	if (bGodMode)
+	{
+		return; // dev mode: untouchable
+	}
+#endif
 	const float Now = GetWorld()->GetTimeSeconds();
 	if (Now - LastContactTime < 1.5f || HealthState == EFCHealthState::Dead)
 	{
@@ -496,28 +705,40 @@ bool AFCPlayerCharacter::TryStartVault()
 
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(FCVault), false, this);
 
-	// Waist-height obstacle check.
+	// Low obstacle check (50cm: solidly below a 90cm window sill, so sill
+	// walls register instead of the probe grazing the opening edge).
 	FHitResult WaistHit;
-	const FVector WaistStart = Feet + FVector(0, 0, 60.0f);
+	const FVector WaistStart = Feet + FVector(0, 0, 50.0f);
 	if (!GetWorld()->LineTraceSingleByChannel(WaistHit, WaistStart,
 		WaistStart + Forward * Tuning->VaultForwardReach, ECC_Visibility, Params))
 	{
+		UE_LOG(LogFootcandle, Verbose, TEXT("[FCVAULT] no low obstacle"));
 		return false;
 	}
+	UE_LOG(LogFootcandle, Verbose, TEXT("[FCVAULT] low hit %s at %s"),
+		WaistHit.GetActor() ? *WaistHit.GetActor()->GetName() : TEXT("?"),
+		*WaistHit.ImpactPoint.ToCompactString());
 
 	// Find the ledge top: trace down from above the obstacle.
 	const FVector Above = WaistHit.ImpactPoint + Forward * 30.0f
 		+ FVector(0, 0, Tuning->VaultMaxLedgeHeight + 50.0f - 60.0f + 60.0f);
 	FHitResult TopHit;
+	// Trace all the way down past foot level - a short trace stopped 2cm
+	// above far-side floors and silently killed window detection.
+	const float DownLength = (Above.Z - Feet.Z) + 60.0f;
 	if (!GetWorld()->LineTraceSingleByChannel(TopHit, Above,
-		Above - FVector(0, 0, Tuning->VaultMaxLedgeHeight + 100.0f), ECC_Visibility, Params))
+		Above - FVector(0, 0, DownLength), ECC_Visibility, Params))
 	{
-		return false;
+		UE_LOG(LogFootcandle, Verbose, TEXT("[FCVAULT] no ledge top under probe"));
+		return TryStartWindowClimb(Forward, Feet, Params);
 	}
 	const float LedgeHeight = TopHit.ImpactPoint.Z - Feet.Z;
 	if (LedgeHeight > Tuning->VaultMaxLedgeHeight || LedgeHeight < 30.0f)
 	{
-		return false;
+		// Too tall to vault, or the probe overshot a THIN wall and found the
+		// far-side floor (a window reads exactly like that) - try climbing
+		// through instead of giving up.
+		return TryStartWindowClimb(Forward, Feet, Params);
 	}
 
 	// Headroom above the landing point.
@@ -527,6 +748,62 @@ bool AFCPlayerCharacter::TryStartVault()
 		GetCapsuleComponent()->GetScaledCapsuleRadius(), HalfHeight);
 	if (GetWorld()->OverlapBlockingTestByChannel(Landing, FQuat::Identity, ECC_Pawn, Capsule, Params))
 	{
+		// Ledge blocked overhead - a window sill under a lintel does this.
+		// Try the CLIMB-THROUGH (playtest ask: in and out of windows).
+		return TryStartWindowClimb(Forward, Feet, Params);
+	}
+
+	bVaulting = true;
+	VaultAlpha = 0.0f;
+	VaultStart = GetActorLocation();
+	VaultTarget = Landing;
+	VaultApexBonus = 18.0f;
+	Stamina -= Tuning->VaultCost;
+	GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Ignore);
+	EmitPlayerNoise(Tuning->NoiseVault, TEXT("Noise.Source.Vault"));
+	return true;
+}
+
+bool AFCPlayerCharacter::TryStartWindowClimb(const FVector& Forward, const FVector& Feet,
+	const FCollisionQueryParams& Params)
+{
+	const UFCTuningSettings* Tuning = UFCTuningSettings::Get();
+
+	// A window reads as: blocked low (the sill wall), CLEAR through the
+	// opening band, and a floor on the far side of the wall.
+	const float ThroughReach = Tuning->VaultForwardReach + 80.0f; // wall + margin
+	FHitResult BandHit;
+	const FVector BandStart = Feet + FVector(0, 0, 150.0f); // mid-window band
+	if (GetWorld()->LineTraceSingleByChannel(BandHit, BandStart,
+		BandStart + Forward * ThroughReach, ECC_Visibility, Params))
+	{
+		UE_LOG(LogFootcandle, Verbose, TEXT("[FCVAULT] window band blocked by %s at %s"),
+			BandHit.GetActor() ? *BandHit.GetActor()->GetName() : TEXT("?"),
+			*BandHit.ImpactPoint.ToCompactString());
+		return false; // no opening at window height
+	}
+
+	// Far-side floor.
+	const FVector FarTop = BandStart + Forward * ThroughReach;
+	FHitResult FloorHit;
+	if (!GetWorld()->LineTraceSingleByChannel(FloorHit, FarTop,
+		FarTop - FVector(0, 0, 500.0f), ECC_Visibility, Params))
+	{
+		UE_LOG(LogFootcandle, Verbose, TEXT("[FCVAULT] no far floor under %s"), *FarTop.ToCompactString());
+		return false; // nothing to land on (do not dive out of high windows blindly)
+	}
+
+	const float HalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	const FVector Landing = FloorHit.ImpactPoint + FVector(0, 0, HalfHeight + 4.0f);
+	FCollisionShape Capsule = FCollisionShape::MakeCapsule(
+		GetCapsuleComponent()->GetScaledCapsuleRadius(), HalfHeight);
+	if (GetWorld()->OverlapBlockingTestByChannel(Landing, FQuat::Identity, ECC_Pawn, Capsule, Params))
+	{
+		return false;
+	}
+	if (Stamina < Tuning->VaultCost)
+	{
 		return false;
 	}
 
@@ -534,10 +811,13 @@ bool AFCPlayerCharacter::TryStartVault()
 	VaultAlpha = 0.0f;
 	VaultStart = GetActorLocation();
 	VaultTarget = Landing;
+	// Arc the camera up through the opening - reads as pulling yourself over
+	// the sill (collision is ignored during the arc; the shape is the feel).
+	VaultApexBonus = FMath::Max(BandStart.Z + 20.0f - FMath::Max(VaultStart.Z, VaultTarget.Z), 24.0f);
 	Stamina -= Tuning->VaultCost;
 	GetCharacterMovement()->SetMovementMode(MOVE_Flying);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Ignore);
-	EmitPlayerNoise(Tuning->NoiseVault, TEXT("Noise.Source.Vault"));
+	EmitPlayerNoise(Tuning->NoiseVault + 5.0f, TEXT("Noise.Source.WindowClimb"));
 	return true;
 }
 
@@ -551,8 +831,8 @@ void AFCPlayerCharacter::UpdateVault(const float DeltaSeconds)
 	VaultAlpha = FMath::Min(VaultAlpha + DeltaSeconds / Tuning->VaultDuration, 1.0f);
 	const float Eased = FMath::InterpEaseInOut(0.0f, 1.0f, VaultAlpha, 2.0f);
 	FVector Position = FMath::Lerp(VaultStart, VaultTarget, Eased);
-	// Camera-space parabola: a small arc so the move reads as a push-up-over.
-	Position.Z += FMath::Sin(Eased * PI) * 18.0f;
+	// Camera-space parabola: the arc height scales for window climbs.
+	Position.Z += FMath::Sin(Eased * PI) * VaultApexBonus;
 	SetActorLocation(Position, false, nullptr, ETeleportType::TeleportPhysics);
 
 	if (VaultAlpha >= 1.0f)
@@ -562,6 +842,37 @@ void AFCPlayerCharacter::UpdateVault(const float DeltaSeconds)
 		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 	}
 }
+
+#if !UE_BUILD_SHIPPING
+void AFCPlayerCharacter::TestToggleCrouch()
+{
+	OnCrouchToggle(FInputActionValue());
+}
+
+FVector AFCPlayerCharacter::TestGetCameraLocation() const
+{
+	return Camera->GetComponentLocation();
+}
+
+void AFCPlayerCharacter::ToggleGhost()
+{
+	bGhostMode = !bGhostMode;
+	if (bGhostMode)
+	{
+		GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+		GetCharacterMovement()->MaxFlySpeed = 1400.0f;
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Ignore);
+	}
+	else
+	{
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+		GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+	}
+	UE_LOG(LogFootcandle, Display, TEXT("[FCDEV] ghost %s"), bGhostMode ? TEXT("ON") : TEXT("OFF"));
+}
+#endif
 
 void AFCPlayerCharacter::EmitPlayerNoise(const float Loudness, const FName Tag)
 {

@@ -48,6 +48,7 @@ private:
 	float GroundSpeed = 0.0f;
 	float TargetEyeOffset = 0.0f;
 	float CurrentEyeOffset = 0.0f;
+	float BaseRelativeZ = 0.0f; // the rig's authored eye height - never stomped
 	bool bSprinting = false;
 	bool bCrouched = false;
 	bool bListening = false;

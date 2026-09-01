@@ -74,6 +74,13 @@ public:
 	// Scripted-smoke hooks (FCM1Smoke) - never compiled into shipping.
 	bool TestVault() { return TryStartVault(); }
 	void TestSetSprint(const bool bSprint) { bWantsSprint = bSprint; }
+
+	// Dev mode (fc.DevMode, F1): tools a dev wants on hand.
+	bool bGodMode = false;
+	bool bGhostMode = false;
+	void ToggleGhost();
+	void TestToggleCrouch();
+	FVector TestGetCameraLocation() const;
 #endif
 
 protected:
@@ -143,6 +150,8 @@ private:
 	void UpdateFlashlight(float DeltaSeconds);
 	void UpdateVault(float DeltaSeconds);
 	bool TryStartVault();
+	bool TryStartWindowClimb(const FVector& Forward, const FVector& Feet,
+		const struct FCollisionQueryParams& Params);
 	void EmitPlayerNoise(float Loudness, FName Tag);
 
 	EFCGait Gait = EFCGait::Walk;
@@ -161,6 +170,7 @@ private:
 	// Vault state.
 	bool bVaulting = false;
 	float VaultAlpha = 0.0f;
+	float VaultApexBonus = 18.0f;
 	FVector VaultStart = FVector::ZeroVector;
 	FVector VaultTarget = FVector::ZeroVector;
 };

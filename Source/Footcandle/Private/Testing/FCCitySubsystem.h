@@ -23,6 +23,10 @@ public:
 
 	bool SpawnFromSeed(uint64 Seed, bool bRunLayer, bool bListener, bool bRain);
 
+	// The default (flagless) run: fresh seed per launch, run layer + hunters,
+	// Director enabled. Called by the shell when the player presses Start.
+	void SpawnAutoRun();
+
 	const FC::Gen::FFCCityData& GetCityData() const { return City; }
 	int32 GetDetailLot() const { return DetailLot; }
 	int32 CountLotsWithShell() const;

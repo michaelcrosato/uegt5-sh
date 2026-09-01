@@ -94,17 +94,17 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Flashlight", meta = (ToolTip = "Battery percent per second while on (~11 min continuous)"))
 	float BatteryDrainPerSecond = 0.15f;
 
-	UPROPERTY(config, EditAnywhere, Category = "Flashlight")
-	float FlashlightIntensityCandela = 900.0f;
+	UPROPERTY(config, EditAnywhere, Category = "Flashlight", meta = (ToolTip = "Playtest-tuned up from 900: the beam must READ at range, not just at arm's length"))
+	float FlashlightIntensityCandela = 1700.0f;
 
 	UPROPERTY(config, EditAnywhere, Category = "Flashlight")
-	float FlashlightInnerCone = 16.0f;
+	float FlashlightInnerCone = 13.0f;
 
 	UPROPERTY(config, EditAnywhere, Category = "Flashlight")
-	float FlashlightOuterCone = 30.0f;
+	float FlashlightOuterCone = 25.0f;
 
 	UPROPERTY(config, EditAnywhere, Category = "Flashlight")
-	float FlashlightRange = 2400.0f;
+	float FlashlightRange = 3400.0f;
 
 	UPROPERTY(config, EditAnywhere, Category = "Flashlight", meta = (ToolTip = "Beam dims below this battery percent"))
 	float BatteryDimBelow = 20.0f;

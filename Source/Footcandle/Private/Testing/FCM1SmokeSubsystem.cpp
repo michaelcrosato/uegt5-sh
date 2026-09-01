@@ -1,5 +1,6 @@
 #include "Testing/FCM1SmokeSubsystem.h"
 
+#include "Components/CapsuleComponent.h"
 #include "Components/LightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/PointLight.h"
@@ -297,6 +298,65 @@ bool UFCM1SmokeSubsystem::Tick(float /*DeltaTime*/)
 				Check(TEXT("M3: upper floor hears via multi-hop path"),
 					Upper > 20.0f && Upper < Probe.Loudness);
 			}
+			// Crouch-height regression (playtest bug: eye went under the
+			// floor): stand on the street, crouch, measure the camera.
+			Player->TeleportTo(FVector(500, -600, 120), FRotator(0, 90, 0), false, true);
+			Frame = 640;
+			Step = 7;
+		}
+		break;
+
+	case 7:
+		if (Frame >= 700 && bGrounded)
+		{
+			const float FloorZ = Player->GetActorLocation().Z
+				- Player->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+			Player->TestToggleCrouch();
+			Frame = 700;
+			Step = 8;
+			MoveStart = FVector(FloorZ, 0, 0); // stash floor height
+		}
+		break;
+
+	case 8: // crouched eye must sit near 105cm over the floor - never sunken
+		if (Frame >= 760)
+		{
+			const float FloorZ = MoveStart.X;
+			const float EyeAboveFloor = Player->TestGetCameraLocation().Z - FloorZ;
+			UE_LOG(LogFootcandle, Display, TEXT("[FCM1SMOKE] crouched eye %.0fcm above floor"), EyeAboveFloor);
+			Check(TEXT("Crouch: eye ~105cm over the floor (not sunken)"),
+				EyeAboveFloor > 85.0f && EyeAboveFloor < 125.0f);
+			Player->TestToggleCrouch(); // stand back up
+
+			// Window climb-through (playtest ask): outside the west window
+			// (sill 90, y 250..350 at x=0), facing +X into the building.
+			// Close enough that the reach (90cm from center) spans the wall.
+			// Controller rotation wins over pawn rotation - set BOTH.
+			Player->TeleportTo(FVector(-90, 300, 120), FRotator(0, 0, 0), false, true);
+			if (AController* Controller = Player->GetController())
+			{
+				Controller->SetControlRotation(FRotator(0, 0, 0));
+			}
+			Frame = 760;
+			Step = 9;
+		}
+		break;
+
+	case 9:
+		if (Frame >= 820 && bGrounded)
+		{
+			Check(TEXT("Window: climb-through starts at the sill"), Player->TestVault());
+			Frame = 820;
+			Step = 10;
+		}
+		break;
+
+	case 10: // arc completes; the player must be INSIDE the west room
+		if (Frame >= 900)
+		{
+			Check(TEXT("Window: landed inside through the opening"),
+				Player->GetActorLocation().X > 20.0f
+				&& FMath::Abs(Player->GetActorLocation().Y - 300.0f) < 200.0f);
 			Finish();
 			return false;
 		}
