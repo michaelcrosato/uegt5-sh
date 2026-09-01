@@ -250,7 +250,13 @@ void UFCShellSubsystem::BuildSettingsItems()
 		const float Min, const float Max, const float Step, const TCHAR* Default)
 	{
 		SettingsItems.Add({ Label,
-			[this, Key, Default]() { return FString::Printf(TEXT("%.2g"), FCString::Atof(*LoadSetting(Key, Default))); },
+			[this, Key, Default]()
+			{
+				const float Value = FCString::Atof(*LoadSetting(Key, Default));
+				return FMath::IsNearlyEqual(Value, FMath::RoundToFloat(Value), 0.001f)
+					? FString::Printf(TEXT("%.0f"), Value)
+					: FString::Printf(TEXT("%.2f"), Value);
+			},
 			[this, Key, CVar, Min, Max, Step, Default](const int32 Direction)
 			{
 				float Value = FCString::Atof(*LoadSetting(Key, Default));
