@@ -399,6 +399,15 @@ pixel, decoupling cost from light count.
 - Prefer larger, dimmer emitters over tiny bright ones (sampling noise — and
   better for the look). Set attenuation radii tightly; overlapping radii
   breed noise/ghosting. Never place lights inside geometry.
+- **Every gameplay light is a visible fixture** (`AFCLightFixture`, decision
+  #29): a physical body — ceiling bulb on a cord, streetlight pole with a
+  cobra head, TV set, emergency LED — that can be switched, wired to
+  circuits, and shattered by a thrown prop (glass noise 95, permanent dark,
+  a light-delta the Watcher notices). The bulb mesh sits just *beside* its
+  light point, never around it: a mesh enclosing the origin blocks its own
+  RT shadows and the registry's occlusion trace, and the point-blank
+  inverse-square blaze on the nearby mesh is what makes "on" read hot
+  without an emissive material.
 - **Flicker is designed, not random.** Per-frame random flicker breaks
   temporal accumulation (denoiser ghosting/boiling — documented community
   failure mode) *and* is a photosensitivity hazard. All flicker routes
@@ -1229,6 +1238,7 @@ Append-only. Every substantive roadmap change adds a line.
 | 26 | 2026-08-31 | **Engine gotcha, encoded in code comments**: spawned `ASpotLight`/light actors carry component-level default rotations — always `SetWorldRotation` on the *component* | The streetlight had aimed south-and-down since M1; every capture "worked" until the perception model disagreed with the image — exactly the AI-07 divergence the registry exists to catch |
 | 27 | 2026-08-31 | Watcher detection: fully-lit-in-direct-view ≈ 3.3 s to Hunt (rate 3.0/s·vis); measured-in-smoke | 11 s (initial 0.9 rate) was too forgiving; tuned via FCM4Smoke timing |
 | 28 | 2026-08-31 | **All ten milestone cores (M0–M10) implemented and evidence-verified in the founding session** — scripted behavior smokes (M1 14/14 · M4 6/6 · M5 7/7×3 seeds · M6 6/6 · M7 3/3 · M8 13/13 · M9 6/6 · M10 4/4), unit+soak suites 6/6 green (1000-seed building + 100-seed city), packaged HWRT evidence, per-station perf sampling, every visual milestone eyeballed from captures | Remaining to the full Alpha bar, tracked here: the human gates (traversal feel M1, three external playtesters M6); polish passes (palette master material + kit meshes into scenes, MetaSounds audible layer, CommonUI skin over the code-drawn shell, full settings menu incl. photosensitivity/visual-sound-indicator toggles — the hooks exist); scale-up (road-graph organics + districts, RT-instance CI gate at city scale, async interior amortization, 10 000-seed full-city soak, packaged city run); and the post-alpha backlog (§15) |
+| 29 | 2026-08-31 | **Every gameplay light is a visible, destroyable fixture** — `AFCLightFixture` (styles: CeilingBulb / Streetlight / TV / EmergencyLED) replaces every raw point/spot spawn in the play scenes; fixtures are interactable (F toggles), circuit-linkable (switch/breaker unchanged — they drive the same `ULightComponent`), and breakable by prop impact (glass noise 95, permanent dark, registry delta). Generated rooms get deterministic variety (rooms `Id % 5 == 3` glow from a guttering floor TV instead of a ceiling bulb). The flashlight gains a visible torch body. Registry occlusion traces ignore the light's own fixture actor. Verified: M1 grew to 24/24 incl. 7 fixture checks; full regression green (M4–M10, Shell, units); address + city captures eyeballed | Director's ask: "every light source is a real thing in the world — a bulb, a headlight, a TV — that can be turned off/on/destroyed." Also P4 embodied: the light economy now has physical targets |
 
 ---
 

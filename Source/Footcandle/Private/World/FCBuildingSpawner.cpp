@@ -1,14 +1,12 @@
 #include "World/FCBuildingSpawner.h"
 
-#include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
-#include "Engine/PointLight.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
-#include "Perception/FCLightRegistry.h"
 #include "World/FCDoor.h"
 #include "World/FCHideSpot.h"
+#include "World/FCLightFixture.h"
 #include "World/FCNoiseProp.h"
 
 using namespace FC::Gen;
@@ -281,24 +279,34 @@ namespace FC::Spawn
 			}
 		}
 
-		// Lights.
-		UFCLightRegistry* Registry = World->GetSubsystem<UFCLightRegistry>();
+		// Lights - visible FIXTURES, never bare light actors (decision #29).
+		// Most rooms hang a ceiling bulb; a deterministic few instead glow
+		// from a TV on the floor - colder, lower, a different kind of room.
 		for (const FFCGenLight& Light : Building.Lights)
 		{
-			APointLight* Point = World->SpawnActor<APointLight>(Origin + Light.Position, FRotator::ZeroRotator);
-			if (Point != nullptr)
+			const bool bTV = (Light.Room % 5 == 3);
+			// Fixture origin: the generated position IS the light position -
+			// bulb style offsets its light -6cm, TV drops to the floor slab.
+			const float FloorBaseZ = Light.Position.Z - (FloorHeight - 60.0f);
+			const FVector FixtureOrigin = Origin + (bTV
+				? FVector(Light.Position.X, Light.Position.Y, FloorBaseZ + 18.0f)
+				: Light.Position + FVector(0, 0, 6.0f));
+			AFCLightFixture* Fixture = World->SpawnActor<AFCLightFixture>(FixtureOrigin, FRotator::ZeroRotator, Params);
+			if (Fixture != nullptr)
 			{
-				Point->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-				UPointLightComponent* Component = CastChecked<UPointLightComponent>(Point->GetLightComponent());
-				Component->SetIntensityUnits(ELightUnits::Candelas);
-				Component->SetIntensity(50.0f);
-				Component->SetLightColor(FLinearColor(1.0f, 0.87f, 0.72f));
-				Component->SetAttenuationRadius(1200.0f);
-				if (Registry != nullptr)
+				if (bTV)
 				{
-					Registry->RegisterLight(Component);
+					Fixture->Configure(EFCFixtureStyle::TV,
+						FLinearColor(0.55f, 0.68f, 1.0f), 20.0f, 900.0f,
+						EFCFlickerStyle::Guttering, /*bWithFlicker*/ true,
+						/*FlickerSeed*/ static_cast<uint64>(Light.Room) * 977u + 5u);
 				}
-				Out.DetailActors.Add(Point);
+				else
+				{
+					Fixture->Configure(EFCFixtureStyle::CeilingBulb,
+						FLinearColor(1.0f, 0.87f, 0.72f), 50.0f, 1200.0f);
+				}
+				Out.DetailActors.Add(Fixture);
 			}
 		}
 

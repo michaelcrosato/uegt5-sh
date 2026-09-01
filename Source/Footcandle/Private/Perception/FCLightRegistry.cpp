@@ -93,10 +93,16 @@ float UFCLightRegistry::SampleIllumination(const FVector& Point, const AActor* I
 			continue;
 		}
 
-		// Occlusion: one trace. (Cached-per-N-frames arrives with the AI
-		// tick budget pass if the profiler asks for it.)
+		// Occlusion: one trace. A light can never be occluded by its own
+		// fixture's meshes (bulb/housing sit millimetres from the origin -
+		// decision #29), so ignore the owning actor.
+		FCollisionQueryParams LightParams = Params;
+		if (AActor* LightOwner = Light->GetOwner())
+		{
+			LightParams.AddIgnoredActor(LightOwner);
+		}
 		FHitResult Hit;
-		if (GetWorld()->LineTraceSingleByChannel(Hit, LightPos, Point, ECC_Visibility, Params))
+		if (GetWorld()->LineTraceSingleByChannel(Hit, LightPos, Point, ECC_Visibility, LightParams))
 		{
 			if (CVarFCLuxDebug.GetValueOnGameThread() != 0)
 			{

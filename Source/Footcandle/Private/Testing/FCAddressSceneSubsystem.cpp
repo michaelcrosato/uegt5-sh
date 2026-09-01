@@ -1,14 +1,11 @@
 #include "Testing/FCAddressSceneSubsystem.h"
 
 #include "Components/DirectionalLightComponent.h"
-#include "Components/PointLightComponent.h"
 #include "Components/SpotLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DirectionalLight.h"
-#include "Engine/PointLight.h"
 #include "Engine/PostProcessVolume.h"
-#include "Engine/SpotLight.h"
-#include "World/FCFlickerComponent.h"
+#include "World/FCLightFixture.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
@@ -209,77 +206,54 @@ void UFCAddressSceneSubsystem::SpawnScene()
 	}
 
 	// --- Lights (movable, shadow-casting; per-room practicals) ---
-	// Every gameplay light registers with the perception registry: "looks
-	// dark" and "is dark" must be the same model (ROADMAP 8.3).
-	UFCLightRegistry* Registry = World->GetSubsystem<UFCLightRegistry>();
-	UPointLightComponent* WestRoomLight = nullptr;
+	// Every gameplay light is now a visible FIXTURE (decision #29): a body
+	// you can see, flip with F, and shatter with a thrown prop. Configure()
+	// registers each with the perception registry: "looks dark" and "is
+	// dark" stay the same model (ROADMAP 8.3).
+	ULightComponent* WestRoomLight = nullptr;
 	{
-		APointLight* Light = World->SpawnActor<APointLight>(FVector(300, 300, 270), FRotator::ZeroRotator);
-		if (Light != nullptr)
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		// West room bulb (light lands at the old capture-tuned Z=270).
+		if (AFCLightFixture* Fixture = World->SpawnActor<AFCLightFixture>(
+			FVector(300, 300, 276), FRotator::ZeroRotator, Params))
 		{
-			Light->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-			WestRoomLight = CastChecked<UPointLightComponent>(Light->GetLightComponent());
-			WestRoomLight->SetIntensityUnits(ELightUnits::Candelas);
-			WestRoomLight->SetIntensity(60.0f);
-			WestRoomLight->SetLightColor(FLinearColor(1.0f, 0.88f, 0.75f));
-			WestRoomLight->SetAttenuationRadius(1400.0f);
-			if (Registry != nullptr) { Registry->RegisterLight(WestRoomLight); }
+			Fixture->Configure(EFCFixtureStyle::CeilingBulb,
+				FLinearColor(1.0f, 0.88f, 0.75f), 60.0f, 1400.0f);
+			WestRoomLight = Fixture->GetLightComponent();
 		}
-	}
-	{
-		// Stair-room emergency light: dim, red, high - and failing (the
+		// Stair-room emergency LED: dim, red, high - and failing (the
 		// flicker component's regression fixture, ROADMAP 6.2).
-		APointLight* Light = World->SpawnActor<APointLight>(FVector(820, 200, 290), FRotator::ZeroRotator);
-		if (Light != nullptr)
+		if (AFCLightFixture* Fixture = World->SpawnActor<AFCLightFixture>(
+			FVector(820, 200, 284), FRotator::ZeroRotator, Params))
 		{
-			Light->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-			UPointLightComponent* Component = CastChecked<UPointLightComponent>(Light->GetLightComponent());
-			Component->SetIntensityUnits(ELightUnits::Candelas);
-			Component->SetIntensity(18.0f);
-			Component->SetLightColor(FLinearColor(1.0f, 0.22f, 0.15f));
-			Component->SetAttenuationRadius(900.0f);
-			if (Registry != nullptr) { Registry->RegisterLight(Component); }
-			UFCFlickerComponent* Flicker = NewObject<UFCFlickerComponent>(Light);
-			Flicker->RegisterComponent();
-			Flicker->Configure(Component, EFCFlickerStyle::FailingTube, /*Seed*/ 2ull);
+			Fixture->Configure(EFCFixtureStyle::EmergencyLED,
+				FLinearColor(1.0f, 0.22f, 0.15f), 18.0f, 900.0f,
+				EFCFlickerStyle::FailingTube, /*bWithFlicker*/ true, /*Seed*/ 2ull);
 		}
-	}
-	{
-		// Upper room practical.
-		APointLight* Light = World->SpawnActor<APointLight>(FVector(450, 300, FloorZ + 260), FRotator::ZeroRotator);
-		if (Light != nullptr)
+		// Upper room bulb.
+		if (AFCLightFixture* Fixture = World->SpawnActor<AFCLightFixture>(
+			FVector(450, 300, FloorZ + 266), FRotator::ZeroRotator, Params))
 		{
-			Light->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-			UPointLightComponent* Component = CastChecked<UPointLightComponent>(Light->GetLightComponent());
-			Component->SetIntensityUnits(ELightUnits::Candelas);
-			Component->SetIntensity(55.0f);
-			Component->SetLightColor(FLinearColor(1.0f, 0.85f, 0.7f));
-			Component->SetAttenuationRadius(1400.0f);
-			if (Registry != nullptr) { Registry->RegisterLight(Component); }
+			Fixture->Configure(EFCFixtureStyle::CeilingBulb,
+				FLinearColor(1.0f, 0.85f, 0.7f), 55.0f, 1400.0f);
 		}
-	}
-	{
-		// Sodium streetlight aimed at the facade and entry.
-		ASpotLight* Light = World->SpawnActor<ASpotLight>(FVector(500, -650, 550), FRotator(-38.0f, 90.0f, 0.0f));
-		if (Light != nullptr)
+		// Sodium streetlight on a real pole, head at the old light position.
+		if (AFCLightFixture* Fixture = World->SpawnActor<AFCLightFixture>(
+			FVector(500, -650, 550), FRotator::ZeroRotator, Params))
 		{
-			Light->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-			USpotLightComponent* Component = CastChecked<USpotLightComponent>(Light->GetLightComponent());
-			// ASpotLight's component has a default downward RELATIVE rotation
-			// that composes badly with actor rotation - set WORLD rotation on
-			// the component (bug found via the lux registry, [FCLUX] cone log).
-			// Capture-tuned twice: the corrected aim at full power washed the
-			// whole facade and killed the doorway shadow - steeper, tighter,
-			// dimmer pools on the street and grazes the wall instead.
-			Component->SetWorldRotation(FRotator(-55.0f, 90.0f, 0.0f));
-			Component->SetIntensityUnits(ELightUnits::Candelas);
-			Component->SetIntensity(800.0f);
-			Component->SetLightColor(FLinearColor(1.0f, 0.64f, 0.23f));
-			Component->SetAttenuationRadius(2200.0f);
-			if (Registry != nullptr) { Registry->RegisterLight(Component); }
-			Component->SetInnerConeAngle(20.0f);
-			Component->SetOuterConeAngle(32.0f);
-			Component->SetVolumetricScatteringIntensity(2.5f);
+			Fixture->Configure(EFCFixtureStyle::Streetlight,
+				FLinearColor(1.0f, 0.64f, 0.23f), 800.0f, 2200.0f);
+			// Capture-tuned aim, kept verbatim: straight down at full power
+			// washed the facade and killed the doorway shadow - this grazes
+			// the wall and pools on the street instead ([FCLUX] history).
+			if (USpotLightComponent* Spot = Cast<USpotLightComponent>(Fixture->GetLightComponent()))
+			{
+				Spot->SetWorldRotation(FRotator(-55.0f, 90.0f, 0.0f));
+				Spot->SetInnerConeAngle(20.0f);
+				Spot->SetOuterConeAngle(32.0f);
+				Spot->SetVolumetricScatteringIntensity(2.5f);
+			}
 		}
 	}
 
@@ -296,7 +270,7 @@ void UFCAddressSceneSubsystem::SpawnScene()
 				CastChecked<UDirectionalLightComponent>(Moon->GetLightComponent());
 			Component->SetIntensity(0.08f); // lux - deep night; capture-tuned from 0.4 which read as dusk
 			Component->SetLightColor(FLinearColor(0.55f, 0.65f, 0.95f));
-			if (Registry != nullptr)
+			if (UFCLightRegistry* Registry = World->GetSubsystem<UFCLightRegistry>())
 			{
 				Registry->RegisterLight(Component);
 			}
@@ -396,5 +370,5 @@ void UFCAddressSceneSubsystem::SpawnScene()
 	}
 
 	UE_LOG(LogFootcandle, Display,
-		TEXT("[FCADDR] One Address spawned: 2 floors, 2 doors, 4 lights, switch, 4 props, locker, 6 stations"));
+		TEXT("[FCADDR] One Address spawned: 2 floors, 2 doors, 4 light fixtures, switch, 4 props, locker, 6 stations"));
 }

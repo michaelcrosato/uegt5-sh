@@ -16,6 +16,8 @@
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
 #include "Interaction/FCInteractionComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/MaterialInterface.h"
 #include "Noise/FCNoiseSubsystem.h"
 #include "Perception/FCLightRegistry.h"
 #include "AI/FCWatcher.h"
@@ -70,6 +72,16 @@ AFCPlayerCharacter::AFCPlayerCharacter()
 	Flashlight->SetVisibility(false);
 	Flashlight->SetMobility(EComponentMobility::Movable);
 
+	// The torch body: entirely BEHIND the light origin (a mesh over the
+	// origin would block its own beam), casting no shadow of its own.
+	TorchBody = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TorchBody"));
+	TorchBody->SetupAttachment(Camera);
+	TorchBody->SetRelativeLocation(FVector(2.0f, 9.0f, -8.0f));
+	TorchBody->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f)); // Z axis -> forward
+	TorchBody->SetRelativeScale3D(FVector(0.045f, 0.045f, 0.18f));
+	TorchBody->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	TorchBody->CastShadow = false;
+
 	// The bodiless player still casts a real shadow (decision log #18):
 	// a hidden cylinder that only the lighting can see.
 	ShadowProxy = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ShadowProxy"));
@@ -79,6 +91,7 @@ AFCPlayerCharacter::AFCPlayerCharacter()
 	if (CylinderMesh.Succeeded())
 	{
 		ShadowProxy->SetStaticMesh(CylinderMesh.Object);
+		TorchBody->SetStaticMesh(CylinderMesh.Object);
 	}
 	ShadowProxy->SetRelativeScale3D(FVector(0.6f, 0.6f, 1.72f));
 	ShadowProxy->SetRelativeLocation(FVector(0.0f, 0.0f, -4.0f));
@@ -114,6 +127,15 @@ void AFCPlayerCharacter::BeginPlay()
 	// The beam must be VISIBLE IN AIR (playtest: "only shows up close to a
 	// wall") - strong volumetric scatter; the scenes carry volumetric fog.
 	Flashlight->SetVolumetricScatteringIntensity(8.0f);
+
+	// Dark rubberised torch body - readable, never brighter than the beam.
+	if (UMaterialInterface* BulbBase = LoadObject<UMaterialInterface>(nullptr,
+		TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial")))
+	{
+		UMaterialInstanceDynamic* TorchMID = UMaterialInstanceDynamic::Create(BulbBase, this);
+		TorchMID->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.03f, 0.03f, 0.035f));
+		TorchBody->SetMaterial(0, TorchMID);
+	}
 
 	CameraCraft->SetTargets(CameraRoot, Camera);
 

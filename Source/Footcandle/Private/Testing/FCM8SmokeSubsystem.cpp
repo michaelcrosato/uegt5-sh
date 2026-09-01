@@ -3,7 +3,6 @@
 #include "AI/FCDirectorSubsystem.h"
 #include "AI/FCWatcher.h"
 #include "Components/LightComponent.h"
-#include "Engine/SpotLight.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Footcandle.h"
@@ -14,6 +13,7 @@
 #include "Objectives/FCRunSubsystem.h"
 #include "Player/FCPlayerCharacter.h"
 #include "World/FCBreakerPanel.h"
+#include "World/FCLightFixture.h"
 
 #if !UE_BUILD_SHIPPING
 
@@ -25,6 +25,20 @@ namespace
 		for (TActorIterator<T> It(World); It; ++It)
 		{
 			return *It;
+		}
+		return nullptr;
+	}
+
+	// Street lights are fixtures now (decision #29); room bulbs are fixtures
+	// too, so filter by style.
+	const AFCLightFixture* FirstStreetFixtureM8(UWorld* World)
+	{
+		for (TActorIterator<AFCLightFixture> It(World); It; ++It)
+		{
+			if (It->GetStyle() == EFCFixtureStyle::Streetlight)
+			{
+				return *It;
+			}
 		}
 		return nullptr;
 	}
@@ -83,7 +97,7 @@ bool UFCM8SmokeSubsystem::Tick(const float DeltaTime)
 	case 0: // dark streets, locked gate, quiet director
 		if (StepTime >= 2.5f)
 		{
-			const ASpotLight* AnyStreet = FirstActorM8<ASpotLight>(World);
+			const AFCLightFixture* AnyStreet = FirstStreetFixtureM8(World);
 			AFCExtractZone* Extract = FirstActorM8<AFCExtractZone>(World);
 			Check(TEXT("Run: 2 conditions required, 0 satisfied"),
 				Run->GetConditionsRequired() == 2 && Run->GetConditionsSatisfied() == 0);
@@ -117,7 +131,7 @@ bool UFCM8SmokeSubsystem::Tick(const float DeltaTime)
 	case 1: // powered streets, full conditions, director escalating
 		if (StepTime >= 4.0f)
 		{
-			const ASpotLight* AnyStreet = FirstActorM8<ASpotLight>(World);
+			const AFCLightFixture* AnyStreet = FirstStreetFixtureM8(World);
 			Check(TEXT("Run: streets LIT after the substation"),
 				AnyStreet != nullptr && AnyStreet->GetLightComponent()->IsVisible());
 			Check(TEXT("Run: 2/2 conditions"), Run->GetConditionsSatisfied() == 2);

@@ -2,12 +2,10 @@
 
 #include "Components/DirectionalLightComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
-#include "Components/SpotLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/ExponentialHeightFog.h"
 #include "Engine/PostProcessVolume.h"
-#include "Engine/SpotLight.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
@@ -27,6 +25,7 @@
 #include "Testing/FCTestStationSubsystem.h"
 #include "UI/FCShellSubsystem.h"
 #include "World/FCBreakerPanel.h"
+#include "World/FCLightFixture.h"
 
 using namespace FC::Gen;
 
@@ -179,29 +178,20 @@ bool UFCCitySubsystem::SpawnFromSeed(const uint64 Seed, const bool bRunLayer,
 		}
 	}
 
-	// --- Street lights: the sodium grid (all MegaLights, all shadowed) ---
+	// --- Street lights: the sodium grid on real poles (decision #29 -
+	// every gameplay light is a visible fixture). Configure() defaults are
+	// the city cone/scatter values and it self-registers with perception. ---
 	{
-		UFCLightRegistry* Registry = World->GetSubsystem<UFCLightRegistry>();
+		FActorSpawnParameters LightParams;
+		LightParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		for (const FVector& LightPos : City.StreetLightPositions)
 		{
-			ASpotLight* Street = World->SpawnActor<ASpotLight>(LightPos, FRotator::ZeroRotator);
+			AFCLightFixture* Street = World->SpawnActor<AFCLightFixture>(LightPos, FRotator::ZeroRotator, LightParams);
 			if (Street != nullptr)
 			{
-				Street->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-				USpotLightComponent* Component = CastChecked<USpotLightComponent>(Street->GetLightComponent());
-				Component->SetWorldRotation(FRotator(-90.0f, 0.0f, 0.0f)); // straight down
-				Component->SetIntensityUnits(ELightUnits::Candelas);
-				Component->SetIntensity(700.0f);
-				Component->SetLightColor(FLinearColor(1.0f, 0.64f, 0.23f));
-				Component->SetAttenuationRadius(1800.0f);
-				Component->SetInnerConeAngle(28.0f);
-				Component->SetOuterConeAngle(46.0f);
-				Component->SetVolumetricScatteringIntensity(2.0f);
-				if (Registry != nullptr)
-				{
-					Registry->RegisterLight(Component);
-				}
-				StreetLightComponents.Add(Component);
+				Street->Configure(EFCFixtureStyle::Streetlight,
+					FLinearColor(1.0f, 0.64f, 0.23f), 700.0f, 1800.0f);
+				StreetLightComponents.Add(Street->GetLightComponent());
 			}
 		}
 	}

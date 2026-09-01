@@ -97,6 +97,11 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "FC")
 	TObjectPtr<USpotLightComponent> Flashlight;
 
+	// The torch is a visible object in your hand (decision #29), not a
+	// disembodied cone - a small dark cylinder at the beam's root.
+	UPROPERTY(VisibleAnywhere, Category = "FC")
+	TObjectPtr<UStaticMeshComponent> TorchBody;
+
 	UPROPERTY(VisibleAnywhere, Category = "FC")
 	TObjectPtr<UStaticMeshComponent> ShadowProxy;
 

@@ -8,7 +8,6 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/PostProcessVolume.h"
-#include "Engine/SpotLight.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
@@ -24,6 +23,7 @@
 #include "Testing/FCTestStationSubsystem.h"
 #include "World/FCBuildingSpawner.h"
 #include "World/FCDoor.h"
+#include "World/FCLightFixture.h"
 
 using namespace FC::Gen;
 
@@ -131,22 +131,20 @@ bool UFCGenBuildingSubsystem::SpawnFromSeed(const uint64 Seed)
 		}
 	}
 	{
-		ASpotLight* Street = World->SpawnActor<ASpotLight>(FVector(W * 0.5f, -650, 550), FRotator::ZeroRotator);
-		if (Street != nullptr)
+		// Streetlight fixture (decision #29), keeping the capture-tuned aim.
+		FActorSpawnParameters LightParams;
+		LightParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (AFCLightFixture* Street = World->SpawnActor<AFCLightFixture>(
+			FVector(W * 0.5f, -650, 550), FRotator::ZeroRotator, LightParams))
 		{
-			Street->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-			USpotLightComponent* Component = CastChecked<USpotLightComponent>(Street->GetLightComponent());
-			Component->SetWorldRotation(FRotator(-55.0f, 90.0f, 0.0f));
-			Component->SetIntensityUnits(ELightUnits::Candelas);
-			Component->SetIntensity(800.0f);
-			Component->SetLightColor(FLinearColor(1.0f, 0.64f, 0.23f));
-			Component->SetAttenuationRadius(2200.0f);
-			Component->SetInnerConeAngle(20.0f);
-			Component->SetOuterConeAngle(32.0f);
-			Component->SetVolumetricScatteringIntensity(2.5f);
-			if (UFCLightRegistry* Registry = World->GetSubsystem<UFCLightRegistry>())
+			Street->Configure(EFCFixtureStyle::Streetlight,
+				FLinearColor(1.0f, 0.64f, 0.23f), 800.0f, 2200.0f);
+			if (USpotLightComponent* Spot = Cast<USpotLightComponent>(Street->GetLightComponent()))
 			{
-				Registry->RegisterLight(Component);
+				Spot->SetWorldRotation(FRotator(-55.0f, 90.0f, 0.0f));
+				Spot->SetInnerConeAngle(20.0f);
+				Spot->SetOuterConeAngle(32.0f);
+				Spot->SetVolumetricScatteringIntensity(2.5f);
 			}
 		}
 	}

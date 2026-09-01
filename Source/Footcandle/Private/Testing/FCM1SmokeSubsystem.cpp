@@ -3,7 +3,6 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/LightComponent.h"
 #include "Components/StaticMeshComponent.h"
-#include "Engine/PointLight.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
@@ -16,6 +15,7 @@
 #include "Player/FCPlayerCharacter.h"
 #include "World/FCDoor.h"
 #include "World/FCHideSpot.h"
+#include "World/FCLightFixture.h"
 #include "World/FCLightSwitch.h"
 
 #if !UE_BUILD_SHIPPING
@@ -168,19 +168,38 @@ bool UFCM1SmokeSubsystem::Tick(float /*DeltaTime*/)
 
 			// Light switch: toggle and verify the west-room light went dark.
 			AFCLightSwitch* Switch = FindNearest<AFCLightSwitch>(World, FVector(430, 30, 120));
-			const APointLight* WestLight = FindNearest<APointLight>(World, FVector(300, 300, 270));
-			if (Switch != nullptr && WestLight != nullptr)
+			AFCLightFixture* WestFixture = FindNearest<AFCLightFixture>(World, FVector(300, 300, 270));
+			if (Switch != nullptr && WestFixture != nullptr)
 			{
 				Switch->Interact(Player, false);
 				Check(TEXT("Switch: light toggled off"),
-					!WestLight->GetLightComponent()->IsVisible());
+					!WestFixture->GetLightComponent()->IsVisible());
 				Switch->Interact(Player, false);
 				Check(TEXT("Switch: light toggled back on"),
-					WestLight->GetLightComponent()->IsVisible());
+					WestFixture->GetLightComponent()->IsVisible());
+
+				// The fixture is its own switch (decision #29): F toggles it.
+				const int32 NoiseBefore = NoiseEventCount;
+				WestFixture->Interact(Player, false);
+				Check(TEXT("Fixture: interact toggled light off"), !WestFixture->IsOn());
+				Check(TEXT("Fixture: toggle emitted click noise"), NoiseEventCount > NoiseBefore);
+				WestFixture->Interact(Player, false);
+				Check(TEXT("Fixture: interact toggled light back on"), WestFixture->IsOn());
+
+				// And it can be DESTROYED: glass noise, permanent dark.
+				const int32 GlassBefore = NoiseEventCount;
+				WestFixture->Break(Player);
+				Check(TEXT("Fixture: break killed the light"),
+					!WestFixture->GetLightComponent()->IsVisible());
+				Check(TEXT("Fixture: break emitted glass noise"), NoiseEventCount > GlassBefore);
+				Check(TEXT("Fixture: broken refuses interaction"), !WestFixture->CanInteract(Player));
+				WestFixture->Interact(Player, false);
+				Check(TEXT("Fixture: broken will not relight"),
+					!WestFixture->GetLightComponent()->IsVisible());
 			}
 			else
 			{
-				Check(TEXT("Switch: found"), Switch != nullptr && WestLight != nullptr);
+				Check(TEXT("Switch: found"), Switch != nullptr && WestFixture != nullptr);
 			}
 
 			// Hide spot: teleport upstairs next to the locker and enter.
