@@ -39,9 +39,15 @@ Do not assume `Source/`, `Content/` or `Config/` are present — check first.
    Exception: engine cvars with no Project Settings surface (e.g. renderer
    tuning like `r.Lumen.*` overrides required by the DLSS plugin) go in ini
    deliberately, each with a comment naming why (see `docs/ROADMAP.md` §6).
-6. Commit or push only when asked. Branch off `main` — never commit to `main`
-   directly. Exception: a safety checkpoint commit on the current work branch
-   immediately **before** any agent-driven editor session (Unreal MCP) is
+6. Branch off `main` — never commit to `main` directly. Mid-task, commit or
+   push only when asked. **Goal-completion protocol (standing order from the
+   director, 2026-08-31): every time a `/goal` finishes — after tests pass
+   and the work is verified — ship it with
+   `./tools/scripts/ship.ps1 -Message "<full commit message>"`, which
+   compiles + repackages `Dist/` when compiled inputs changed, runs the
+   hygiene gate, commits everything, and pushes to GitHub.** Exception: a
+   safety checkpoint commit on the current work branch immediately
+   **before** any agent-driven editor session (Unreal MCP) is
    pre-authorised — an agent with editor write access and no checkpoint is a
    bad afternoon.
 

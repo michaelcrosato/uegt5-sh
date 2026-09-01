@@ -40,6 +40,12 @@ A compile is not a pass. Logic changes run the tests; anything visible runs
 the visual check and the screenshots get *looked at*. Renderer claims are
 verified in the `[FCBOOT]` log lines, not assumed from ini files.
 
+When a `/goal` finishes, it ships — no drift between repo, exe, and GitHub:
+
+```powershell
+./tools/scripts/ship.ps1 -Message "<msg>"  # build + repackage (if code changed), hygiene, commit, push
+```
+
 ## Visual testing (use it constantly)
 
 - `-fcdevscene` on the command line spawns the code-defined lighting scene.
