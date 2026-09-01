@@ -309,20 +309,20 @@ bool UFCM1SmokeSubsystem::Tick(float /*DeltaTime*/)
 	case 7:
 		if (Frame >= 700 && bGrounded)
 		{
-			const float FloorZ = Player->GetActorLocation().Z
+			const float TestFloorZ = Player->GetActorLocation().Z
 				- Player->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 			Player->TestToggleCrouch();
 			Frame = 700;
 			Step = 8;
-			MoveStart = FVector(FloorZ, 0, 0); // stash floor height
+			MoveStart = FVector(TestFloorZ, 0, 0); // stash floor height
 		}
 		break;
 
 	case 8: // crouched eye must sit near 105cm over the floor - never sunken
 		if (Frame >= 760)
 		{
-			const float FloorZ = MoveStart.X;
-			const float EyeAboveFloor = Player->TestGetCameraLocation().Z - FloorZ;
+			const float TestFloorZ = MoveStart.X;
+			const float EyeAboveFloor = Player->TestGetCameraLocation().Z - TestFloorZ;
 			UE_LOG(LogFootcandle, Display, TEXT("[FCM1SMOKE] crouched eye %.0fcm above floor"), EyeAboveFloor);
 			Check(TEXT("Crouch: eye ~105cm over the floor (not sunken)"),
 				EyeAboveFloor > 85.0f && EyeAboveFloor < 125.0f);
