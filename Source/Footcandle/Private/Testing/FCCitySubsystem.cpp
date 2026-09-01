@@ -166,6 +166,8 @@ bool UFCCitySubsystem::SpawnFromSeed(const uint64 Seed, const bool bRunLayer,
 			PP->Settings.AutoExposureMaxBrightness = 1.5f; // see address scene note
 			PP->Settings.bOverride_AutoExposureBias = true;
 			PP->Settings.AutoExposureBias = -0.4f;
+			PP->Settings.bOverride_BloomIntensity = true;
+			PP->Settings.BloomIntensity = 0.4f; // see address scene note
 		}
 		// Night air: thin volumetric fog so beams and streetlight cones exist
 		// IN AIR, not only on surfaces (playtest: invisible flashlight beam).

@@ -128,6 +128,8 @@ bool UFCGenBuildingSubsystem::SpawnFromSeed(const uint64 Seed)
 			PP->Settings.AutoExposureMaxBrightness = 1.5f; // see address scene note
 			PP->Settings.bOverride_AutoExposureBias = true;
 			PP->Settings.AutoExposureBias = -0.4f;
+			PP->Settings.bOverride_BloomIntensity = true;
+			PP->Settings.BloomIntensity = 0.4f; // see address scene note
 		}
 	}
 	{

@@ -127,9 +127,12 @@ void AFCPlayerCharacter::BeginPlay()
 	// Old incandescent torch, not studio white (flash-check audit): the warm
 	// tint is what separates the beam from moonlight and blown highlights.
 	Flashlight->SetLightColor(FLinearColor(1.0f, 0.88f, 0.72f));
-	// The beam must be VISIBLE IN AIR (playtest: "only shows up close to a
-	// wall") - strong volumetric scatter; the scenes carry volumetric fog.
-	Flashlight->SetVolumetricScatteringIntensity(8.0f);
+	// Volumetric scatter history: x8 was compensating for the shadow-proxy
+	// eclipse (the beam lit NO surfaces, so the air glow was all there was).
+	// With surfaces fixed, any real scatter reads as a milk cone from behind
+	// the torch (playtest: "dustiest air"). 0.05: the beam reads by what it
+	// LIGHTS; the air carries only a trace of it.
+	Flashlight->SetVolumetricScatteringIntensity(0.05f);
 
 	// Dark rubberised torch body - readable, never brighter than the beam.
 	if (UMaterialInterface* BulbBase = LoadObject<UMaterialInterface>(nullptr,

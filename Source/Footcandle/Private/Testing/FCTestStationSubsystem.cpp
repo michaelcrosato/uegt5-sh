@@ -166,6 +166,7 @@ void UFCTestStationSubsystem::StartTour(const FString& OutputDir, const bool bQu
 	TourPhase = ETourPhase::Settling;
 	TourFramesRemaining = CVarFCTourSettleFrames.GetValueOnGameThread();
 	bFlashCheckPending = FParse::Param(FCommandLine::Get(), TEXT("fcflashcheck"));
+	bFlashOnPending = FParse::Param(FCommandLine::Get(), TEXT("fcflashon"));
 	TeleportToStation(Stations[0].Name);
 	UE_LOG(LogFootcandle, Display, TEXT("[FCTEST] Tour started: %d stations -> %s"),
 		Stations.Num(), *TourOutputDir);
@@ -188,6 +189,20 @@ bool UFCTestStationSubsystem::TickTour(float /*DeltaTime*/)
 		bFlashCheckPending = false;
 		ApplyFlashlightOnly();
 	}
+#if !UE_BUILD_SHIPPING
+	else if (bFlashOnPending)
+	{
+		// -fcflashon: torch on, world lights kept - the normal-play condition.
+		bFlashOnPending = false;
+		if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+		{
+			if (AFCPlayerCharacter* Player = Cast<AFCPlayerCharacter>(PC->GetPawn()))
+			{
+				Player->TestSetFlashlight(true);
+			}
+		}
+	}
+#endif
 
 	// While sampling, accumulate thread/GPU timings every frame.
 	if (TourPhase == ETourPhase::Sampling)

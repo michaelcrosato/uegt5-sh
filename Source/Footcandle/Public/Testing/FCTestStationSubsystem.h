@@ -50,6 +50,7 @@ private:
 	void ApplyFlashlightOnly();
 
 	bool bFlashCheckPending = false;
+	bool bFlashOnPending = false;
 
 	TArray<FFCTestStation> Stations;
 

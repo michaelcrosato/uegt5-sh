@@ -29,10 +29,13 @@ void AFCHUD::DrawCenteredLine(const FString& Text, const float Y,
 	const float X = (Canvas->SizeX - Width) * 0.5f;
 	if (bShadow)
 	{
-		// Dark backing pass: keeps the line readable over a blown-out light
-		// source AND over pitch dark (playtest: white-on-white prompts).
-		DrawText(Text, FLinearColor(0.0f, 0.0f, 0.0f, 0.85f), X + 2.0f, Y + 2.0f,
-			GEngine->GetLargeFont(), Scale);
+		// Opaque black plate behind the line (playtest: a drop shadow alone
+		// still washed out against the flashlight disc) - always readable,
+		// over glare and over pitch dark alike.
+		constexpr float PadX = 10.0f;
+		constexpr float PadY = 5.0f;
+		DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.92f),
+			X - PadX, Y - PadY, Width + 2.0f * PadX, Height + 2.0f * PadY);
 	}
 	DrawText(Text, Color, X, Y, GEngine->GetLargeFont(), Scale);
 }

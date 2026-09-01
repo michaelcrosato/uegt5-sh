@@ -94,14 +94,14 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Flashlight", meta = (ToolTip = "Battery percent per second while on (~11 min continuous)"))
 	float BatteryDrainPerSecond = 0.15f;
 
-	UPROPERTY(config, EditAnywhere, Category = "Flashlight", meta = (ToolTip = "Playtest-tuned up from 900: the beam must READ at range, not just at arm's length"))
-	float FlashlightIntensityCandela = 1700.0f;
+	UPROPERTY(config, EditAnywhere, Category = "Flashlight", meta = (ToolTip = "1700 dated from the eclipse era, when the beam lit no surfaces and only fog glow showed; with surfaces working it was a wall of glare"))
+	float FlashlightIntensityCandela = 1000.0f;
 
-	UPROPERTY(config, EditAnywhere, Category = "Flashlight", meta = (ToolTip = "Tight hot core; the wide soft skirt does the falloff (flash-check audit)"))
-	float FlashlightInnerCone = 7.0f;
+	UPROPERTY(config, EditAnywhere, Category = "Flashlight", meta = (ToolTip = "Tight hot core; the soft skirt does the falloff (flash-check audit)"))
+	float FlashlightInnerCone = 6.0f;
 
-	UPROPERTY(config, EditAnywhere, Category = "Flashlight", meta = (ToolTip = "Wide skirt so the disc grades instead of plateauing"))
-	float FlashlightOuterCone = 31.0f;
+	UPROPERTY(config, EditAnywhere, Category = "Flashlight", meta = (ToolTip = "22: gradient without splashing the ground at your feet into bloom"))
+	float FlashlightOuterCone = 22.0f;
 
 	UPROPERTY(config, EditAnywhere, Category = "Flashlight")
 	float FlashlightRange = 3400.0f;

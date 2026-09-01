@@ -299,6 +299,10 @@ void UFCAddressSceneSubsystem::SpawnScene()
 			PP->Settings.AutoExposureMaxBrightness = 1.5f;
 			PP->Settings.bOverride_AutoExposureBias = true;
 			PP->Settings.AutoExposureBias = -0.4f;
+			// Bloom down from 0.675: veiling glare over every bright patch
+			// stacked with the torch (playtest: "blinding white light").
+			PP->Settings.bOverride_BloomIntensity = true;
+			PP->Settings.BloomIntensity = 0.4f;
 		}
 	}
 
